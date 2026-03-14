@@ -26,6 +26,7 @@ let compactView  = localStorage.getItem('vp_view')   === 'compact';
 let cardSize     = localStorage.getItem('vp_csize')  || 'medium';
 let accentColor  = localStorage.getItem('vp_accent') || '#7c5cfc';
 let bgStyle      = localStorage.getItem('vp_bg')     || 'default';
+let tabTitle     = localStorage.getItem('vp_tabtitle') || '';
 
 /* ─── TIMER STATE ───────────────────────────────────── */
 let timerInterval  = null;
@@ -57,6 +58,7 @@ function saveState() {
   localStorage.setItem('vp_csize',     cardSize);
   localStorage.setItem('vp_accent',    accentColor);
   localStorage.setItem('vp_bg',        bgStyle);
+  localStorage.setItem('vp_tabtitle',  tabTitle);
 }
 
 /* ─── TOAST ─────────────────────────────────────────── */
@@ -320,14 +322,7 @@ document.getElementById('shortcutsBtn').addEventListener('click', () => { render
 document.getElementById('shortcutsModalClose').addEventListener('click', () => { document.getElementById('shortcutsModal').classList.remove('open'); listeningFor = null; });
 document.getElementById('shortcutsModal').addEventListener('click', e => { if(e.target===document.getElementById('shortcutsModal')){ document.getElementById('shortcutsModal').classList.remove('open'); listeningFor = null; }});
 
-/* ─── SETTINGS MODAL ────────────────────────────────── */
-document.getElementById('settingsBtn').addEventListener('click', () => {
-  document.getElementById('bgStyleSelect').value  = bgStyle;
-  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color === accentColor));
-  document.getElementById('customColorPicker').value = accentColor;
-  document.querySelectorAll('.size-btn[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === cardSize));
-  document.getElementById('settingsModal').classList.add('open');
-});
+/* ─── SETTINGS MODAL CLOSE/OVERLAY ─────────────────── */
 document.getElementById('settingsModalClose').addEventListener('click', () => document.getElementById('settingsModal').classList.remove('open'));
 document.getElementById('settingsModal').addEventListener('click', e => { if(e.target===document.getElementById('settingsModal')) document.getElementById('settingsModal').classList.remove('open'); });
 document.getElementById('settingsThemeBtn').addEventListener('click', () => { darkMode = !darkMode; applyTheme(); showToast(darkMode ? '🌙 Dark mode' : '☀️ Light mode'); });
@@ -347,6 +342,8 @@ document.querySelectorAll('.size-btn[data-size]').forEach(b => {
 });
 
 document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+  tabTitle = document.getElementById('tabTitleInput').value.trim();
+  applyTabTitle();
   saveState();
   showToast('✅ Settings saved!');
   document.getElementById('settingsModal').classList.remove('open');
@@ -355,7 +352,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
 /* clear all data */
 document.getElementById('clearDataBtn').addEventListener('click', () => {
   if (!confirm('Are you sure? This will wipe all your favorites, history, ratings, and stats.')) return;
-  ['vp_favs','vp_recent','vp_plays','vp_ratings','vp_best','vp_shortcuts','vp_sort','vp_view','vp_csize','vp_accent','vp_bg','vp_theme'].forEach(k => localStorage.removeItem(k));
+  ['vp_favs','vp_recent','vp_plays','vp_ratings','vp_best','vp_shortcuts','vp_sort','vp_view','vp_csize','vp_accent','vp_bg','vp_tabtitle','vp_theme'].forEach(k => localStorage.removeItem(k));
   location.reload();
 });
 
@@ -519,7 +516,10 @@ function triggerPanic() {
 document.getElementById('panicBtn').addEventListener('click', triggerPanic);
 
 /* ─── KEYBOARD HANDLER ──────────────────────────────── */
-document.addEventListener('keydown', e => {
+  /* Ctrl+K spotlight */
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault(); openSpotlight(); return;
+  }
   if (listeningFor) {
     e.preventDefault();
     if (e.key === 'Escape') { listeningFor = null; renderShortcutsList(); return; }
@@ -543,6 +543,146 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* ─── TAB TITLE CHANGER ─────────────────────────────── */
+function applyTabTitle() {
+  document.title = tabTitle || 'VaultPlay — Free Games Online';
+  const el = document.getElementById('currentTabTitle');
+  if (el) el.textContent = tabTitle || 'VaultPlay — Free Games Online';
+}
+
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  document.getElementById('tabTitleInput').value = tabTitle;
+  document.getElementById('currentTabTitle').textContent = document.title;
+  document.querySelectorAll('.tab-preset').forEach(b =>
+    b.classList.toggle('active', b.dataset.title === tabTitle)
+  );
+  document.getElementById('bgStyleSelect').value = bgStyle;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color === accentColor));
+  document.getElementById('customColorPicker').value = accentColor;
+  document.querySelectorAll('.size-btn[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === cardSize));
+  document.getElementById('settingsModal').classList.add('open');
+});
+
+document.querySelectorAll('.tab-preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('tabTitleInput').value = btn.dataset.title;
+    document.querySelectorAll('.tab-preset').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+document.getElementById('resetTabTitleBtn').addEventListener('click', () => {
+  tabTitle = '';
+  document.getElementById('tabTitleInput').value = '';
+  document.querySelectorAll('.tab-preset').forEach(b => b.classList.remove('active'));
+  applyTabTitle();
+  saveState();
+  showToast('Tab title reset');
+});
+
+/* ─── CTRL+K SPOTLIGHT ──────────────────────────────── */
+let spotlightIndex = -1;
+let spotlightFiltered = [];
+
+function openSpotlight() {
+  document.getElementById('spotlightOverlay').classList.add('open');
+  document.getElementById('spotlightInput').value = '';
+  spotlightIndex = -1;
+  renderSpotlight('');
+  setTimeout(() => document.getElementById('spotlightInput').focus(), 50);
+}
+
+function closeSpotlight() {
+  document.getElementById('spotlightOverlay').classList.remove('open');
+  document.getElementById('spotlightInput').blur();
+  spotlightIndex = -1;
+}
+
+function highlightMatch(text, query) {
+  if (!query) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return text.slice(0, idx) +
+    `<mark>${text.slice(idx, idx + query.length)}</mark>` +
+    text.slice(idx + query.length);
+}
+
+function renderSpotlight(query) {
+  const container = document.getElementById('spotlightResults');
+  const q = query.trim().toLowerCase();
+
+  spotlightFiltered = q
+    ? GAMES.filter(g => g.name.toLowerCase().includes(q) || g.cat.toLowerCase().includes(q))
+    : [...GAMES].sort((a, b) => (playCounts[b.name] || 0) - (playCounts[a.name] || 0));
+
+  if (spotlightFiltered.length === 0) {
+    container.innerHTML = `<div class="spotlight-empty"><span>🔍</span>No games match "${query}"</div>`;
+    return;
+  }
+
+  container.innerHTML = spotlightFiltered.map((game, i) => `
+    <div class="spotlight-result ${i === spotlightIndex ? 'selected' : ''}" data-idx="${i}">
+      <div class="sr-thumb">
+        ${game.thumb
+          ? `<img src="${game.thumb}" alt="${game.name}" loading="lazy">`
+          : `<div class="sr-thumb-placeholder">🎮</div>`}
+      </div>
+      <div class="sr-info">
+        <div class="sr-name">${highlightMatch(game.name, query)}</div>
+        <span class="sr-cat">${game.cat}</span>
+      </div>
+      ${isFav(game.name) ? '<div class="sr-fav-dot" title="Favorited"></div>' : ''}
+      <div class="sr-play-hint">
+        ${playCounts[game.name] ? `▶ ${playCounts[game.name]}x` : ''}
+      </div>
+    </div>`).join('');
+
+  container.querySelectorAll('.spotlight-result').forEach(row => {
+    row.addEventListener('click', () => {
+      const game = spotlightFiltered[parseInt(row.dataset.idx)];
+      closeSpotlight();
+      openGame(game);
+    });
+    row.addEventListener('mouseenter', () => {
+      spotlightIndex = parseInt(row.dataset.idx);
+      updateSpotlightSelection();
+    });
+  });
+}
+
+function updateSpotlightSelection() {
+  const rows = document.querySelectorAll('.spotlight-result');
+  rows.forEach((r, i) => r.classList.toggle('selected', i === spotlightIndex));
+  const selected = rows[spotlightIndex];
+  if (selected) selected.scrollIntoView({ block: 'nearest' });
+}
+
+document.getElementById('spotlightInput').addEventListener('input', e => {
+  spotlightIndex = -1;
+  renderSpotlight(e.target.value);
+});
+
+document.getElementById('spotlightInput').addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    spotlightIndex = Math.min(spotlightIndex + 1, spotlightFiltered.length - 1);
+    updateSpotlightSelection();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    spotlightIndex = Math.max(spotlightIndex - 1, 0);
+    updateSpotlightSelection();
+  } else if (e.key === 'Enter') {
+    const game = spotlightFiltered[spotlightIndex] || spotlightFiltered[0];
+    if (game) { closeSpotlight(); openGame(game); }
+  } else if (e.key === 'Escape') {
+    closeSpotlight();
+  }
+});
+
+document.getElementById('spotlightOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('spotlightOverlay')) closeSpotlight();
+});
+
 /* ─── THEME TOGGLE ──────────────────────────────────── */
 const themeBtn  = document.getElementById('themeBtn');
 const themeIcon = document.getElementById('themeIcon');
@@ -561,5 +701,6 @@ applyTheme();
 applyAccent(accentColor);
 applyBg(bgStyle);
 applyCardSize(cardSize);
+applyTabTitle();
 applyView();
 renderAll();
