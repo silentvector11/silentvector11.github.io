@@ -19,6 +19,12 @@ const GAMES = [
     url: "games/drive-mad/index.html",
     thumb: "thumbnails/drive-mad.jpg",
   },
+  {
+    name: "Crossy Road",
+    cat: "action",
+    url: "games/crossyroad/index.html",
+    thumb: "thumbnails/crossyroad.jpg",
+  },
 ];
 
 /* ─── STATE ─────────────────────────────────────────── */
