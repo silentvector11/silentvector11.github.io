@@ -12,7 +12,7 @@
 
   <!-- ══ NAV ══════════════════════════════════════════════ -->
   <nav>
-    <div class="nav-logo">Vault<span>Play</span></div>
+    <div class="nav-logo" id="navLogo">Vault<span>Play</span></div>
 
     <div class="nav-search-wrap">
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -20,7 +20,30 @@
     </div>
 
     <div class="nav-actions">
-      <button class="btn-panic" id="panicBtn" title="Panic! Hide site (Alt+X)">
+      <!-- Clock -->
+      <div class="nav-clock" id="navClock">00:00</div>
+
+      <!-- View toggle -->
+      <button class="btn-icon" id="viewToggleBtn" title="Toggle view">
+        <svg id="viewIcon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+
+      <!-- Shortcuts -->
+      <button class="btn-icon" id="shortcutsBtn" title="Keyboard shortcuts (?)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+      </button>
+
+      <!-- Stats -->
+      <button class="btn-icon" id="statsBtn" title="Personal Stats">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </button>
+
+      <!-- Settings (site name + theme) -->
+      <button class="btn-icon" id="settingsBtn" title="Settings">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+
+      <button class="btn-panic" id="panicBtn" title="Panic! (Alt+X)">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span>Panic</span>
       </button>
@@ -56,103 +79,56 @@
           <span class="cat-count" id="cnt-recent">0</span>
         </button>
       </div>
-
       <div class="sidebar-section">
         <div class="sidebar-label">Categories</div>
-        <button class="cat-btn" data-cat="action">
-          <span class="cat-icon">⚔️</span> Action
-          <span class="cat-count" id="cnt-action">0</span>
-        </button>
-        <button class="cat-btn" data-cat="puzzle">
-          <span class="cat-icon">🧩</span> Puzzle
-          <span class="cat-count" id="cnt-puzzle">0</span>
-        </button>
-        <button class="cat-btn" data-cat="io">
-          <span class="cat-icon">🌐</span> IO Games
-          <span class="cat-count" id="cnt-io">0</span>
-        </button>
-        <button class="cat-btn" data-cat="sports">
-          <span class="cat-icon">⚽</span> Sports
-          <span class="cat-count" id="cnt-sports">0</span>
-        </button>
-        <button class="cat-btn" data-cat="racing">
-          <span class="cat-icon">🏎️</span> Racing
-          <span class="cat-count" id="cnt-racing">0</span>
-        </button>
-        <button class="cat-btn" data-cat="adventure">
-          <span class="cat-icon">🗺️</span> Adventure
-          <span class="cat-count" id="cnt-adventure">0</span>
-        </button>
-        <button class="cat-btn" data-cat="casual">
-          <span class="cat-icon">🎈</span> Casual
-          <span class="cat-count" id="cnt-casual">0</span>
-        </button>
-        <button class="cat-btn" data-cat="other">
-          <span class="cat-icon">✨</span> Other
-          <span class="cat-count" id="cnt-other">0</span>
-        </button>
+        <button class="cat-btn" data-cat="action"><span class="cat-icon">⚔️</span> Action<span class="cat-count" id="cnt-action">0</span></button>
+        <button class="cat-btn" data-cat="puzzle"><span class="cat-icon">🧩</span> Puzzle<span class="cat-count" id="cnt-puzzle">0</span></button>
+        <button class="cat-btn" data-cat="io"><span class="cat-icon">🌐</span> IO Games<span class="cat-count" id="cnt-io">0</span></button>
+        <button class="cat-btn" data-cat="sports"><span class="cat-icon">⚽</span> Sports<span class="cat-count" id="cnt-sports">0</span></button>
+        <button class="cat-btn" data-cat="racing"><span class="cat-icon">🏎️</span> Racing<span class="cat-count" id="cnt-racing">0</span></button>
+        <button class="cat-btn" data-cat="adventure"><span class="cat-icon">🗺️</span> Adventure<span class="cat-count" id="cnt-adventure">0</span></button>
+        <button class="cat-btn" data-cat="casual"><span class="cat-icon">🎈</span> Casual<span class="cat-count" id="cnt-casual">0</span></button>
+        <button class="cat-btn" data-cat="other"><span class="cat-icon">✨</span> Other<span class="cat-count" id="cnt-other">0</span></button>
       </div>
     </aside>
 
     <!-- MAIN -->
     <main>
-
-      <!-- HERO -->
       <div class="hero">
         <div class="hero-tag">🎮 Free &amp; Instant Play</div>
         <h1>Play Games.<br><span>No Downloads. No Limits.</span></h1>
         <p>Jump into hundreds of browser games instantly — no installs, no sign-ups, just pure fun.</p>
       </div>
 
-      <!-- RECENTLY PLAYED -->
       <section id="recentSection">
-        <div class="section-header">
-          <div class="section-title"><span class="dot"></span> Recently Played</div>
-        </div>
+        <div class="section-header"><div class="section-title"><span class="dot"></span> Recently Played</div></div>
         <div class="recent-chips" id="recentChips"></div>
       </section>
 
-      <!-- FAVORITES -->
       <section id="favSection">
-        <div class="section-header">
-          <div class="section-title"><span class="dot"></span> Your Favorites</div>
-        </div>
+        <div class="section-header"><div class="section-title"><span class="dot"></span> Your Favorites</div></div>
         <div class="game-grid" id="favGrid"></div>
       </section>
 
-      <!-- ALL GAMES -->
       <section id="allGamesSection">
         <div class="section-header">
           <div class="section-title" id="sectionTitle"><span class="dot"></span> All Games</div>
         </div>
-
-        <!-- NO GAMES NOTICE -->
         <div class="add-games-notice" id="addNotice">
           <div class="notice-icon">🕹️</div>
           <div class="notice-title">No Games Yet</div>
-          <p class="notice-sub">Add your games to the <code>GAMES</code> array in <strong>script.js</strong>. Each game needs a name, category, URL (for iframe embed), and an optional thumbnail.</p>
-          <div class="notice-code">
-            { name: "Game Name",<br>
-            &nbsp;&nbsp;cat: "action",<br>
-            &nbsp;&nbsp;url: "https://3kh0.github.io/...",<br>
-            &nbsp;&nbsp;thumb: "https://...",<br>
-            &nbsp;&nbsp;isNew: true,<br>
-            &nbsp;&nbsp;isHot: false }
-          </div>
-          <p class="notice-hint">Add multiple games separated by commas inside the GAMES array in script.js</p>
+          <p class="notice-sub">Add your games to the <code>GAMES</code> array in <strong>script.js</strong>.</p>
+          <div class="notice-code">{ name: "Game Name", cat: "action",<br>&nbsp;&nbsp;url: "games/folder/index.html",<br>&nbsp;&nbsp;thumb: "thumbnails/name.png" }</div>
         </div>
-
         <div class="game-grid" id="gameGrid"></div>
-
         <div class="empty-state" id="emptyState">
           <div class="empty-icon">🔍</div>
           <h3>No results found</h3>
           <p>Try a different search term or category.</p>
         </div>
       </section>
-
     </main>
-  </div><!-- .page-wrap -->
+  </div>
 
   <!-- ══ GAME PLAYER ══════════════════════════════════════ -->
   <div id="gamePlayer">
@@ -167,6 +143,10 @@
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           Favorite
         </button>
+        <button class="player-btn" id="pipBtn" title="Picture in Picture">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="12" y="11" width="9" height="6" rx="1"/></svg>
+          PiP
+        </button>
         <button class="player-btn" id="fullscreenBtn">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
           Fullscreen
@@ -177,10 +157,7 @@
         </button>
       </div>
     </div>
-
-    <!-- player body: iframe + info sidebar -->
     <div class="player-body">
-
       <div class="player-frame-wrap">
         <div id="loadingOverlay">
           <div class="spinner"></div>
@@ -188,26 +165,17 @@
         </div>
         <iframe id="gameFrame" allowfullscreen></iframe>
       </div>
-
-      <!-- GAME INFO SIDEBAR -->
       <div class="game-info-sidebar" id="gameInfoSidebar">
-
         <div class="gis-header">
           <span class="gis-title">Game Info</span>
           <button class="gis-close" id="gisCloseBtn">✕</button>
         </div>
-
-        <!-- thumbnail -->
         <div class="gis-thumb" id="gisThumbnail"></div>
-
-        <!-- timer -->
         <div class="gis-section">
           <div class="gis-section-label">Session Timer</div>
           <div class="gis-timer" id="gisTimer">00:00</div>
           <div class="gis-timer-sub">time played this session</div>
         </div>
-
-        <!-- star rating -->
         <div class="gis-section">
           <div class="gis-section-label">Your Rating</div>
           <div class="gis-stars" id="gisStars">
@@ -219,48 +187,29 @@
           </div>
           <div class="gis-star-label" id="gisStarLabel">Tap to rate</div>
         </div>
-
-        <!-- stats -->
         <div class="gis-section">
           <div class="gis-section-label">Stats</div>
-          <div class="gis-stat">
-            <span class="gis-stat-label">Times Played</span>
-            <span class="gis-stat-value" id="gisPlayCount">0</span>
-          </div>
-          <div class="gis-stat">
-            <span class="gis-stat-label">Best Session</span>
-            <span class="gis-stat-value" id="gisBestTime" style="color:#fbbf24">—</span>
-          </div>
-          <div class="gis-stat">
-            <span class="gis-stat-label">Category</span>
-            <span class="gis-stat-value" id="gisCat">—</span>
-          </div>
+          <div class="gis-stat"><span class="gis-stat-label">Times Played</span><span class="gis-stat-value" id="gisPlayCount">0</span></div>
+          <div class="gis-stat"><span class="gis-stat-label">Best Session</span><span class="gis-stat-value" id="gisBestTime" style="color:#fbbf24">—</span></div>
+          <div class="gis-stat"><span class="gis-stat-label">Category</span><span class="gis-stat-value" id="gisCat">—</span></div>
         </div>
-
       </div>
-      <!-- end game info sidebar -->
-
     </div>
-    <!-- end player body -->
   </div>
 
-  <!-- ══ PANIC OVERLAY (fake Google) ══════════════════════ -->
+  <!-- ══ PANIC OVERLAY ════════════════════════════════════ -->
   <div id="panicOverlay">
     <div class="fake-google">
       <div class="fg-nav">
-        <a href="#">About</a>
-        <a href="#">Store</a>
-        <a href="#" style="margin-left:16px">Gmail</a>
-        <a href="#">Images</a>
+        <a href="#">About</a><a href="#">Store</a>
+        <a href="#" style="margin-left:16px">Gmail</a><a href="#">Images</a>
         <a href="#" class="fg-nav-sign">Sign in</a>
       </div>
       <div class="fg-center">
-        <div class="fg-logo">
-          <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
-        </div>
+        <div class="fg-logo"><span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span></div>
         <div class="fg-search-wrap">
           <svg width="18" height="18" fill="none" stroke="#9aa0a6" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input class="fg-search-input" type="text" placeholder="" autocomplete="off"/>
+          <input class="fg-search-input" type="text" autocomplete="off"/>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="#4285f4"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
         </div>
         <div class="fg-btns">
@@ -269,26 +218,68 @@
         </div>
       </div>
       <div class="fg-footer">
-        <div style="display:flex;gap:20px">
-          <a href="#">Advertising</a>
-          <a href="#">Business</a>
-          <a href="#">How Search works</a>
-        </div>
-        <div style="display:flex;gap:20px">
-          <a href="#">Privacy</a>
-          <a href="#">Terms</a>
-          <a href="#">Settings</a>
-        </div>
+        <div style="display:flex;gap:20px"><a href="#">Advertising</a><a href="#">Business</a><a href="#">How Search works</a></div>
+        <div style="display:flex;gap:20px"><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Settings</a></div>
       </div>
       <div class="fg-hint">Press <strong>Alt+X</strong> to return</div>
+    </div>
+  </div>
+
+  <!-- ══ STATS MODAL ══════════════════════════════════════ -->
+  <div class="modal-overlay" id="statsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">📊 Personal Stats</div>
+        <button class="modal-close" id="statsModalClose">✕</button>
+      </div>
+      <div class="modal-body" id="statsModalBody"></div>
+    </div>
+  </div>
+
+  <!-- ══ SHORTCUTS MODAL ══════════════════════════════════ -->
+  <div class="modal-overlay" id="shortcutsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">⌨️ Keyboard Shortcuts</div>
+        <button class="modal-close" id="shortcutsModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted);font-size:13px;margin-bottom:18px;">Click any shortcut key to change it. Press the new key to assign.</p>
+        <div id="shortcutsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS MODAL ═══════════════════════════════════ -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ Settings</div>
+        <button class="modal-close" id="settingsModalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-row">
+          <div class="setting-label">
+            <div class="setting-name">Site Name</div>
+            <div class="setting-hint">The name shown in the navbar and browser tab</div>
+          </div>
+          <input class="setting-input" id="siteNameInput" type="text" placeholder="VaultPlay" maxlength="20"/>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <div class="setting-name">Theme</div>
+            <div class="setting-hint">Switch between dark and light mode</div>
+          </div>
+          <button class="setting-btn" id="settingsThemeBtn">Toggle Theme</button>
+        </div>
+        <button class="setting-save" id="saveSettingsBtn">Save Changes</button>
+      </div>
     </div>
   </div>
 
   <!-- ══ TOAST ════════════════════════════════════════════ -->
   <div class="toast" id="toast"></div>
 
-  <!-- ══ SCRIPT ═══════════════════════════════════════════ -->
   <script src="script.js"></script>
-
 </body>
 </html>
