@@ -24,11 +24,8 @@ let searchQuery  = '';
 let sortMode     = localStorage.getItem('vp_sort')   || 'default';
 let compactView  = localStorage.getItem('vp_view')   === 'compact';
 let cardSize     = localStorage.getItem('vp_csize')  || 'medium';
-let sidebarWidth = localStorage.getItem('vp_sbw')    || 'normal';
 let accentColor  = localStorage.getItem('vp_accent') || '#7c5cfc';
 let bgStyle      = localStorage.getItem('vp_bg')     || 'default';
-let fakeTitle    = localStorage.getItem('vp_ftitle') || 'Google';
-let fakeUrl      = localStorage.getItem('vp_furl')   || 'google.com';
 
 /* ─── TIMER STATE ───────────────────────────────────── */
 let timerInterval  = null;
@@ -58,11 +55,8 @@ function saveState() {
   localStorage.setItem('vp_sort',      sortMode);
   localStorage.setItem('vp_view',      compactView ? 'compact' : 'grid');
   localStorage.setItem('vp_csize',     cardSize);
-  localStorage.setItem('vp_sbw',       sidebarWidth);
   localStorage.setItem('vp_accent',    accentColor);
   localStorage.setItem('vp_bg',        bgStyle);
-  localStorage.setItem('vp_ftitle',    fakeTitle);
-  localStorage.setItem('vp_furl',      fakeUrl);
 }
 
 /* ─── TOAST ─────────────────────────────────────────── */
@@ -228,18 +222,6 @@ function applyCardSize(size) {
   localStorage.setItem('vp_csize', size);
 }
 
-/* ─── SIDEBAR WIDTH ─────────────────────────────────── */
-function applySidebarWidth(w) {
-  sidebarWidth = w;
-  const aside = document.getElementById('mainSidebar');
-  aside.classList.remove('sidebar-collapsed','sidebar-narrow','sidebar-wide');
-  if (w === 'collapsed') aside.classList.add('sidebar-collapsed');
-  else if (w === 'narrow') aside.classList.add('sidebar-narrow');
-  else if (w === 'wide')   aside.classList.add('sidebar-wide');
-  document.querySelectorAll('.size-btn[data-width]').forEach(b => b.classList.toggle('active', b.dataset.width === w));
-  localStorage.setItem('vp_sbw', w);
-}
-
 /* ─── VIEW TOGGLE ───────────────────────────────────── */
 function applyView() {
   document.querySelectorAll('.game-grid').forEach(g => g.classList.toggle('compact-view', compactView));
@@ -340,13 +322,10 @@ document.getElementById('shortcutsModal').addEventListener('click', e => { if(e.
 
 /* ─── SETTINGS MODAL ────────────────────────────────── */
 document.getElementById('settingsBtn').addEventListener('click', () => {
-  document.getElementById('fakeTitleInput').value = fakeTitle;
-  document.getElementById('fakeUrlInput').value   = fakeUrl;
   document.getElementById('bgStyleSelect').value  = bgStyle;
   document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color === accentColor));
   document.getElementById('customColorPicker').value = accentColor;
   document.querySelectorAll('.size-btn[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === cardSize));
-  document.querySelectorAll('.size-btn[data-width]').forEach(b => b.classList.toggle('active', b.dataset.width === sidebarWidth));
   document.getElementById('settingsModal').classList.add('open');
 });
 document.getElementById('settingsModalClose').addEventListener('click', () => document.getElementById('settingsModal').classList.remove('open'));
@@ -367,15 +346,7 @@ document.querySelectorAll('.size-btn[data-size]').forEach(b => {
   b.addEventListener('click', () => applyCardSize(b.dataset.size));
 });
 
-/* sidebar width buttons */
-document.querySelectorAll('.size-btn[data-width]').forEach(b => {
-  b.addEventListener('click', () => applySidebarWidth(b.dataset.width));
-});
-
-/* save settings */
 document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-  fakeTitle = document.getElementById('fakeTitleInput').value.trim() || 'Google';
-  fakeUrl   = document.getElementById('fakeUrlInput').value.trim()   || 'google.com';
   saveState();
   showToast('✅ Settings saved!');
   document.getElementById('settingsModal').classList.remove('open');
@@ -384,7 +355,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
 /* clear all data */
 document.getElementById('clearDataBtn').addEventListener('click', () => {
   if (!confirm('Are you sure? This will wipe all your favorites, history, ratings, and stats.')) return;
-  ['vp_favs','vp_recent','vp_plays','vp_ratings','vp_best','vp_shortcuts','vp_sort','vp_view','vp_csize','vp_sbw','vp_accent','vp_bg','vp_ftitle','vp_furl','vp_theme'].forEach(k => localStorage.removeItem(k));
+  ['vp_favs','vp_recent','vp_plays','vp_ratings','vp_best','vp_shortcuts','vp_sort','vp_view','vp_csize','vp_accent','vp_bg','vp_theme'].forEach(k => localStorage.removeItem(k));
   location.reload();
 });
 
@@ -511,9 +482,9 @@ function renderAll() {
 }
 
 /* ─── CATEGORY BUTTONS ──────────────────────────────── */
-document.querySelectorAll('.cat-btn').forEach(btn => {
+document.querySelectorAll('.cat-pill').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentCat = btn.dataset.cat;
     renderAll();
@@ -542,13 +513,10 @@ document.getElementById('favInPlayer').addEventListener('click', () => {
 });
 
 /* ─── PANIC ─────────────────────────────────────────── */
-let panicActive = false;
-function togglePanic() {
-  panicActive = !panicActive;
-  document.getElementById('panicOverlay').classList.toggle('active', panicActive);
-  document.title = panicActive ? fakeTitle : 'VaultPlay — Free Games Online';
+function triggerPanic() {
+  location.replace('https://www.google.com');
 }
-document.getElementById('panicBtn').addEventListener('click', togglePanic);
+document.getElementById('panicBtn').addEventListener('click', triggerPanic);
 
 /* ─── KEYBOARD HANDLER ──────────────────────────────── */
 document.addEventListener('keydown', e => {
@@ -564,7 +532,7 @@ document.addEventListener('keydown', e => {
 
   const sc = shortcuts;
   if (e.key.toLowerCase() === sc.closeGame.key && document.getElementById('gamePlayer').classList.contains('open')) { closeGame(); return; }
-  if (e.key.toLowerCase() === sc.panic.key && (sc.panic.alt ? e.altKey : true)) { e.preventDefault(); togglePanic(); return; }
+  if (e.key.toLowerCase() === sc.panic.key && (sc.panic.alt ? e.altKey : true)) { e.preventDefault(); triggerPanic(); return; }
   if (e.key.toLowerCase() === sc.random.key && !document.getElementById('gamePlayer').classList.contains('open')) {
     if (GAMES.length > 0) openGame(GAMES[Math.floor(Math.random() * GAMES.length)]); return;
   }
@@ -593,6 +561,5 @@ applyTheme();
 applyAccent(accentColor);
 applyBg(bgStyle);
 applyCardSize(cardSize);
-applySidebarWidth(sidebarWidth);
 applyView();
 renderAll();
