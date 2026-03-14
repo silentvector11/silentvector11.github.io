@@ -9,7 +9,7 @@
 const GAMES = [
   { name: "Slope",       cat: "action", url: "games/slope/index.html",       thumb: "thumbnails/slope.jpeg" },
   { name: "Drive Mad",   cat: "racing", url: "games/drive-mad/index.html",   thumb: "thumbnails/drive-mad.jpg" },
-  { name: "Crossy Road", cat: "casual", url: "games/crossy-road/index.html", thumb: "thumbnails/crossyroad.jpg" },
+  { name: "Crossy Road", cat: "casual", url: "games/crossyroad/index.html", thumb: "thumbnails/crossyroad.jpg" },
 ];
 
 /* ─── STATE ─────────────────────────────────────────── */
@@ -516,6 +516,7 @@ function triggerPanic() {
 document.getElementById('panicBtn').addEventListener('click', triggerPanic);
 
 /* ─── KEYBOARD HANDLER ──────────────────────────────── */
+document.addEventListener('keydown', e => {
   /* Ctrl+K spotlight */
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault(); openSpotlight(); return;
