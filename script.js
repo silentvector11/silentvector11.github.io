@@ -7,24 +7,9 @@
      thumb : path to thumbnail image (e.g. thumbnails/slope.png)
 ─────────────────────────────────────────────────────── */
 const GAMES = [
-  {
-    name: "Slope",
-    cat: "action",
-    url: "games/slope/index.html",
-    thumb: "thumbnails/slope.jpeg",
-  },
-  {
-    name: "Drive Mad",
-    cat: "racing",
-    url: "games/drive-mad/index.html",
-    thumb: "thumbnails/drive-mad.jpg",
-  },
-  {
-    name: "Crossy Road",
-    cat: "casual",
-    url: "games/crossy-road/index.html",
-    thumb: "thumbnails/crossy-road.jpg",
-  },
+  { name: "Slope",       cat: "action", url: "games/slope/index.html",       thumb: "thumbnails/slope.jpeg" },
+  { name: "Drive Mad",   cat: "racing", url: "games/drive-mad/index.html",   thumb: "thumbnails/drive-mad.jpg" },
+  { name: "Crossy Road", cat: "casual", url: "games/crossy-road/index.html", thumb: "thumbnails/crossyroad.jpg" },
 ];
 
 /* ─── STATE ─────────────────────────────────────────── */
@@ -33,11 +18,17 @@ let recentPlayed = JSON.parse(localStorage.getItem('vp_recent')  || '[]');
 let playCounts   = JSON.parse(localStorage.getItem('vp_plays')   || '{}');
 let ratings      = JSON.parse(localStorage.getItem('vp_ratings') || '{}');
 let bestTimes    = JSON.parse(localStorage.getItem('vp_best')    || '{}');
-let sessionLog   = JSON.parse(localStorage.getItem('vp_sessions')|| '[]');
 let currentGame  = null;
 let currentCat   = 'all';
 let searchQuery  = '';
-let compactView  = localStorage.getItem('vp_view') === 'compact';
+let sortMode     = localStorage.getItem('vp_sort')   || 'default';
+let compactView  = localStorage.getItem('vp_view')   === 'compact';
+let cardSize     = localStorage.getItem('vp_csize')  || 'medium';
+let sidebarWidth = localStorage.getItem('vp_sbw')    || 'normal';
+let accentColor  = localStorage.getItem('vp_accent') || '#7c5cfc';
+let bgStyle      = localStorage.getItem('vp_bg')     || 'default';
+let fakeTitle    = localStorage.getItem('vp_ftitle') || 'Google';
+let fakeUrl      = localStorage.getItem('vp_furl')   || 'google.com';
 
 /* ─── TIMER STATE ───────────────────────────────────── */
 let timerInterval  = null;
@@ -46,30 +37,35 @@ let sidebarVisible = true;
 
 /* ─── KEYBOARD SHORTCUTS ────────────────────────────── */
 const DEFAULT_SHORTCUTS = {
-  random:     { key: 'r',      desc: 'Random Game',        hint: 'Opens a random game' },
-  panic:      { key: 'x',      desc: 'Panic (Alt+)',       hint: 'Shows fake Google page', alt: true },
-  closeGame:  { key: 'Escape', desc: 'Close Game',         hint: 'Closes the game player' },
-  stats:      { key: 's',      desc: 'Stats',              hint: 'Opens your personal stats' },
-  shortcuts:  { key: '?',      desc: 'Shortcuts Panel',    hint: 'Opens this panel' },
-  toggleView: { key: 'v',      desc: 'Toggle View',        hint: 'Grid / Compact view' },
+  random:     { key: 'r',      desc: 'Random Game',     hint: 'Opens a random game',          alt: false },
+  panic:      { key: 'x',      desc: 'Panic (Alt+)',    hint: 'Shows the disguised page',      alt: true  },
+  closeGame:  { key: 'escape', desc: 'Close Game',      hint: 'Closes the game player',        alt: false },
+  stats:      { key: 's',      desc: 'Stats',           hint: 'Opens your personal stats',     alt: false },
+  shortcuts:  { key: '?',      desc: 'Shortcuts Panel', hint: 'Opens this shortcuts panel',    alt: false },
+  toggleView: { key: 'v',      desc: 'Toggle View',     hint: 'Switch grid / compact view',    alt: false },
 };
-let shortcuts = JSON.parse(localStorage.getItem('vp_shortcuts') || 'null') || JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS));
+let shortcuts    = JSON.parse(localStorage.getItem('vp_shortcuts') || 'null') || JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS));
 let listeningFor = null;
 
-/* ─── SITE NAME ─────────────────────────────────────── */
-let siteName = localStorage.getItem('vp_sitename') || 'VaultPlay';
-
-/* ─── HELPERS ───────────────────────────────────────── */
+/* ─── SAVE ──────────────────────────────────────────── */
 function saveState() {
   localStorage.setItem('vp_favs',      JSON.stringify(favorites));
   localStorage.setItem('vp_recent',    JSON.stringify(recentPlayed));
   localStorage.setItem('vp_plays',     JSON.stringify(playCounts));
   localStorage.setItem('vp_ratings',   JSON.stringify(ratings));
   localStorage.setItem('vp_best',      JSON.stringify(bestTimes));
-  localStorage.setItem('vp_sessions',  JSON.stringify(sessionLog));
   localStorage.setItem('vp_shortcuts', JSON.stringify(shortcuts));
+  localStorage.setItem('vp_sort',      sortMode);
+  localStorage.setItem('vp_view',      compactView ? 'compact' : 'grid');
+  localStorage.setItem('vp_csize',     cardSize);
+  localStorage.setItem('vp_sbw',       sidebarWidth);
+  localStorage.setItem('vp_accent',    accentColor);
+  localStorage.setItem('vp_bg',        bgStyle);
+  localStorage.setItem('vp_ftitle',    fakeTitle);
+  localStorage.setItem('vp_furl',      fakeUrl);
 }
 
+/* ─── TOAST ─────────────────────────────────────────── */
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -77,21 +73,14 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+/* ─── FAVORITES ─────────────────────────────────────── */
 function isFav(name) { return favorites.includes(name); }
-
 function toggleFav(name, event) {
   if (event) event.stopPropagation();
-  if (isFav(name)) {
-    favorites = favorites.filter(f => f !== name);
-    showToast('Removed from favorites');
-  } else {
-    favorites.push(name);
-    showToast('❤️ Added to favorites!');
-  }
-  saveState();
-  renderAll();
+  if (isFav(name)) { favorites = favorites.filter(f => f !== name); showToast('Removed from favorites'); }
+  else             { favorites.push(name); showToast('❤️ Added to favorites!'); }
+  saveState(); renderAll();
 }
-
 function addRecent(game) {
   recentPlayed = recentPlayed.filter(r => r !== game.name);
   recentPlayed.unshift(game.name);
@@ -100,13 +89,15 @@ function addRecent(game) {
   saveState();
 }
 
-/* ─── CLOCK ─────────────────────────────────────────── */
+/* ─── CLOCK (12h) ───────────────────────────────────── */
 function updateClock() {
   const now  = new Date();
-  const h    = String(now.getHours()).padStart(2, '0');
-  const m    = String(now.getMinutes()).padStart(2, '0');
-  const s    = String(now.getSeconds()).padStart(2, '0');
-  document.getElementById('navClock').textContent = `${h}:${m}:${s}`;
+  let   h    = now.getHours();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('navClock').textContent = `${h}:${m}:${s} ${ampm}`;
 }
 updateClock();
 setInterval(updateClock, 1000);
@@ -117,7 +108,6 @@ function formatTime(secs) {
   const s = String(secs % 60).padStart(2, '0');
   return `${m}:${s}`;
 }
-
 function startTimer() {
   stopTimer();
   timerSeconds = 0;
@@ -127,47 +117,29 @@ function startTimer() {
     document.getElementById('gisTimer').textContent = formatTime(timerSeconds);
   }, 1000);
 }
-
 function stopTimer() {
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
     if (currentGame && timerSeconds > 0) {
-      /* save best time */
       const prev = bestTimes[currentGame.name] || 0;
-      if (timerSeconds > prev) {
-        bestTimes[currentGame.name] = timerSeconds;
-      }
-      /* log session */
-      sessionLog.unshift({
-        game: currentGame.name,
-        secs: timerSeconds,
-        date: new Date().toLocaleDateString()
-      });
-      if (sessionLog.length > 50) sessionLog.pop();
-      saveState();
+      if (timerSeconds > prev) { bestTimes[currentGame.name] = timerSeconds; saveState(); }
     }
   }
 }
 
 /* ─── STAR RATING ───────────────────────────────────── */
 const starLabels = ['', 'Terrible 😬', 'Meh 😐', 'OK 👍', 'Great 😄', 'Amazing! 🔥'];
-
 function renderStars(gameName) {
   const current = ratings[gameName] || 0;
-  document.querySelectorAll('.gis-star').forEach(s => {
-    s.classList.toggle('active', parseInt(s.dataset.star) <= current);
-  });
+  document.querySelectorAll('.gis-star').forEach(s => s.classList.toggle('active', parseInt(s.dataset.star) <= current));
   document.getElementById('gisStarLabel').textContent = current > 0 ? starLabels[current] : 'Tap to rate';
 }
-
 document.querySelectorAll('.gis-star').forEach(star => {
   star.addEventListener('click', () => {
     if (!currentGame) return;
     const val = parseInt(star.dataset.star);
-    ratings[currentGame.name] = val;
-    saveState();
-    renderStars(currentGame.name);
+    ratings[currentGame.name] = val; saveState(); renderStars(currentGame.name);
     showToast(`Rated ${starLabels[val]}`);
   });
   star.addEventListener('mouseenter', () => {
@@ -178,21 +150,11 @@ document.querySelectorAll('.gis-star').forEach(star => {
 });
 
 /* ─── GAME INFO SIDEBAR ─────────────────────────────── */
-function openSidebar() {
-  sidebarVisible = true;
-  document.getElementById('gameInfoSidebar').classList.remove('collapsed');
-  document.getElementById('sidebarToggleBtn').classList.add('active');
-}
-function closeSidebar() {
-  sidebarVisible = false;
-  document.getElementById('gameInfoSidebar').classList.add('collapsed');
-  document.getElementById('sidebarToggleBtn').classList.remove('active');
-}
+function openSidebar()  { sidebarVisible = true;  document.getElementById('gameInfoSidebar').classList.remove('collapsed'); document.getElementById('sidebarToggleBtn').classList.add('active'); }
+function closeSidebar() { sidebarVisible = false; document.getElementById('gameInfoSidebar').classList.add('collapsed');    document.getElementById('sidebarToggleBtn').classList.remove('active'); }
 function populateSidebar(game) {
   const thumb = document.getElementById('gisThumbnail');
-  thumb.innerHTML = game.thumb
-    ? `<img src="${game.thumb}" alt="${game.name}">`
-    : `<div class="gis-thumb-placeholder">🎮</div>`;
+  thumb.innerHTML = game.thumb ? `<img src="${game.thumb}" alt="${game.name}">` : `<div class="gis-thumb-placeholder">🎮</div>`;
   document.getElementById('gisPlayCount').textContent = playCounts[game.name] || 1;
   const best = bestTimes[game.name];
   document.getElementById('gisBestTime').textContent = best ? formatTime(best) : '—';
@@ -202,131 +164,166 @@ function populateSidebar(game) {
 document.getElementById('sidebarToggleBtn').addEventListener('click', () => sidebarVisible ? closeSidebar() : openSidebar());
 document.getElementById('gisCloseBtn').addEventListener('click', closeSidebar);
 
+/* ─── ACCENT COLOR ──────────────────────────────────── */
+function applyAccent(color) {
+  accentColor = color;
+  const r = parseInt(color.slice(1,3),16);
+  const g = parseInt(color.slice(3,5),16);
+  const b = parseInt(color.slice(5,7),16);
+  document.documentElement.style.setProperty('--accent', color);
+  document.documentElement.style.setProperty('--accent-glow', `rgba(${r},${g},${b},.35)`);
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color === color));
+  localStorage.setItem('vp_accent', color);
+}
+
+/* ─── BACKGROUND STYLE ──────────────────────────────── */
+const bgClasses = ['bg-gradient','bg-animated','bg-dots'];
+let   starsAnimFrame = null;
+
+function applyBg(style) {
+  bgStyle = style;
+  bgClasses.forEach(c => document.body.classList.remove(c));
+  const canvas = document.getElementById('bgCanvas');
+  canvas.classList.remove('visible');
+  if (starsAnimFrame) { cancelAnimationFrame(starsAnimFrame); starsAnimFrame = null; }
+
+  if (style === 'gradient')  { document.body.classList.add('bg-gradient'); }
+  else if (style === 'animated') { document.body.classList.add('bg-animated'); }
+  else if (style === 'dots') { document.body.classList.add('bg-dots'); }
+  else if (style === 'stars') { canvas.classList.add('visible'); drawStars(canvas); }
+  localStorage.setItem('vp_bg', style);
+}
+
+function drawStars(canvas) {
+  const ctx = canvas.getContext('2d');
+  const stars = Array.from({length: 150}, () => ({
+    x: Math.random(), y: Math.random(),
+    r: Math.random() * 1.5 + 0.3,
+    a: Math.random(), da: (Math.random() - 0.5) * 0.005
+  }));
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  function frame() {
+    canvas.width = canvas.width;
+    stars.forEach(s => {
+      s.a = Math.max(0.1, Math.min(1, s.a + s.da));
+      if (s.a <= 0.1 || s.a >= 1) s.da *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x * canvas.width, s.y * canvas.height, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+      ctx.fill();
+    });
+    starsAnimFrame = requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+/* ─── CARD SIZE ─────────────────────────────────────── */
+function applyCardSize(size) {
+  cardSize = size;
+  document.body.classList.remove('card-small','card-medium','card-large');
+  document.body.classList.add(`card-${size}`);
+  document.querySelectorAll('.size-btn[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === size));
+  localStorage.setItem('vp_csize', size);
+}
+
+/* ─── SIDEBAR WIDTH ─────────────────────────────────── */
+function applySidebarWidth(w) {
+  sidebarWidth = w;
+  const aside = document.getElementById('mainSidebar');
+  aside.classList.remove('sidebar-collapsed','sidebar-narrow','sidebar-wide');
+  if (w === 'collapsed') aside.classList.add('sidebar-collapsed');
+  else if (w === 'narrow') aside.classList.add('sidebar-narrow');
+  else if (w === 'wide')   aside.classList.add('sidebar-wide');
+  document.querySelectorAll('.size-btn[data-width]').forEach(b => b.classList.toggle('active', b.dataset.width === w));
+  localStorage.setItem('vp_sbw', w);
+}
+
 /* ─── VIEW TOGGLE ───────────────────────────────────── */
 function applyView() {
-  const grids = document.querySelectorAll('.game-grid');
-  const icon  = document.getElementById('viewIcon');
-  grids.forEach(g => g.classList.toggle('compact-view', compactView));
+  document.querySelectorAll('.game-grid').forEach(g => g.classList.toggle('compact-view', compactView));
+  const icon = document.getElementById('viewIcon');
   icon.innerHTML = compactView
     ? `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>`
     : `<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>`;
   localStorage.setItem('vp_view', compactView ? 'compact' : 'grid');
 }
 document.getElementById('viewToggleBtn').addEventListener('click', () => {
-  compactView = !compactView;
-  applyView();
-  showToast(compactView ? 'Compact view' : 'Grid view');
+  compactView = !compactView; applyView(); showToast(compactView ? 'Compact view' : 'Grid view');
 });
 
-/* ─── SITE NAME ─────────────────────────────────────── */
-function applySiteName() {
-  const parts = siteName.split(/(?=[A-Z])/).join('');
-  const half  = Math.ceil(siteName.length / 2);
-  const first = siteName.slice(0, half);
-  const second= siteName.slice(half);
-  document.getElementById('navLogo').innerHTML = `${first}<span>${second}</span>`;
-  document.title = `${siteName} — Free Games Online`;
-  document.getElementById('siteNameInput').value = siteName;
-  localStorage.setItem('vp_sitename', siteName);
+/* ─── SORT ──────────────────────────────────────────── */
+document.getElementById('sortSelect').value = sortMode;
+document.getElementById('sortSelect').addEventListener('change', e => {
+  sortMode = e.target.value; saveState(); renderAll();
+});
+function sortGames(list) {
+  if (sortMode === 'az')          return [...list].sort((a,b) => a.name.localeCompare(b.name));
+  if (sortMode === 'za')          return [...list].sort((a,b) => b.name.localeCompare(a.name));
+  if (sortMode === 'most-played') return [...list].sort((a,b) => (playCounts[b.name]||0) - (playCounts[a.name]||0));
+  if (sortMode === 'top-rated')   return [...list].sort((a,b) => (ratings[b.name]||0) - (ratings[a.name]||0));
+  return list;
 }
 
 /* ─── STATS MODAL ───────────────────────────────────── */
 function openStatsModal() {
-  const totalPlays  = Object.values(playCounts).reduce((a, b) => a + b, 0);
-  const totalSecs   = sessionLog.reduce((a, s) => a + s.secs, 0);
-  const totalGames  = Object.keys(playCounts).length;
-  const topGame     = Object.entries(playCounts).sort((a, b) => b[1] - a[1])[0];
-  const avgRating   = Object.values(ratings).length > 0
-    ? (Object.values(ratings).reduce((a, b) => a + b, 0) / Object.values(ratings).length).toFixed(1)
-    : '—';
+  const totalPlays = Object.values(playCounts).reduce((a,b) => a+b, 0);
+  const totalSecs  = Object.values(bestTimes).reduce((a,b) => a+b, 0);
+  const totalGames = Object.keys(playCounts).length;
+  const topGame    = Object.entries(playCounts).sort((a,b)=>b[1]-a[1])[0];
+  const avgRating  = Object.values(ratings).length > 0
+    ? (Object.values(ratings).reduce((a,b)=>a+b,0)/Object.values(ratings).length).toFixed(1) : '—';
   const favCat = (() => {
     const cats = {};
-    Object.entries(playCounts).forEach(([name, count]) => {
+    Object.entries(playCounts).forEach(([name,count]) => {
       const game = GAMES.find(g => g.name === name);
-      if (game) cats[game.cat] = (cats[game.cat] || 0) + count;
+      if (game) cats[game.cat] = (cats[game.cat]||0) + count;
     });
-    const top = Object.entries(cats).sort((a, b) => b[1] - a[1])[0];
+    const top = Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
     return top ? top[0] : '—';
   })();
-
-  const body = document.getElementById('statsModalBody');
-  body.innerHTML = `
+  document.getElementById('statsModalBody').innerHTML = `
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-card-value">${totalPlays}</div>
-        <div class="stat-card-label">Total Play Sessions</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-value">${formatTime(totalSecs)}</div>
-        <div class="stat-card-label">Total Time Played</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-value">${totalGames}</div>
-        <div class="stat-card-label">Games Played</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-value">${avgRating}⭐</div>
-        <div class="stat-card-label">Avg Rating Given</div>
-      </div>
+      <div class="stat-card"><div class="stat-card-value">${totalPlays}</div><div class="stat-card-label">Total Sessions</div></div>
+      <div class="stat-card"><div class="stat-card-value">${totalGames}</div><div class="stat-card-label">Games Played</div></div>
+      <div class="stat-card"><div class="stat-card-value">${avgRating}⭐</div><div class="stat-card-label">Avg Rating</div></div>
+      <div class="stat-card"><div class="stat-card-value">${favorites.length}</div><div class="stat-card-label">Favorites</div></div>
     </div>
-
     <div class="stats-section-title">🏆 Most Played</div>
     <table class="stats-table">
       <thead><tr><th>Game</th><th>Plays</th><th>Best Session</th><th>Rating</th></tr></thead>
-      <tbody>
-        ${Object.entries(playCounts).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([name, count]) => `
-          <tr>
-            <td class="td-name">${name}</td>
-            <td>${count}</td>
-            <td>${bestTimes[name] ? formatTime(bestTimes[name]) : '—'}</td>
-            <td>${ratings[name] ? '⭐'.repeat(ratings[name]) : '—'}</td>
-          </tr>`).join('')}
+      <tbody>${Object.entries(playCounts).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([name,count]) => `
+        <tr>
+          <td class="td-name">${name}</td>
+          <td>${count}</td>
+          <td>${bestTimes[name] ? formatTime(bestTimes[name]) : '—'}</td>
+          <td>${ratings[name] ? '⭐'.repeat(ratings[name]) : '—'}</td>
+        </tr>`).join('')}
       </tbody>
     </table>
-
-    ${sessionLog.length > 0 ? `
-    <div class="stats-section-title" style="margin-top:20px">📅 Recent Sessions</div>
-    <table class="stats-table">
-      <thead><tr><th>Game</th><th>Duration</th><th>Date</th></tr></thead>
-      <tbody>
-        ${sessionLog.slice(0,6).map(s => `
-          <tr>
-            <td class="td-name">${s.game}</td>
-            <td>${formatTime(s.secs)}</td>
-            <td>${s.date}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>` : ''}
-
     <div style="margin-top:16px;font-size:13px;color:var(--muted)">
       Favourite category: <strong style="color:var(--text)">${favCat}</strong>
-      &nbsp;·&nbsp; Favourite game: <strong style="color:var(--text)">${topGame ? topGame[0] : '—'}</strong>
+      &nbsp;·&nbsp; Top game: <strong style="color:var(--text)">${topGame ? topGame[0] : '—'}</strong>
     </div>`;
-
   document.getElementById('statsModal').classList.add('open');
 }
-
 document.getElementById('statsBtn').addEventListener('click', openStatsModal);
 document.getElementById('statsModalClose').addEventListener('click', () => document.getElementById('statsModal').classList.remove('open'));
-document.getElementById('statsModal').addEventListener('click', e => { if (e.target === document.getElementById('statsModal')) document.getElementById('statsModal').classList.remove('open'); });
+document.getElementById('statsModal').addEventListener('click', e => { if(e.target===document.getElementById('statsModal')) document.getElementById('statsModal').classList.remove('open'); });
 
 /* ─── SHORTCUTS MODAL ───────────────────────────────── */
 function renderShortcutsList() {
   const list = document.getElementById('shortcutsList');
   list.innerHTML = Object.entries(shortcuts).map(([id, sc]) => `
     <div class="shortcut-row">
-      <div class="shortcut-desc">
-        ${sc.desc}
-        <small>${sc.hint}</small>
-      </div>
+      <div class="shortcut-desc">${sc.desc}<small>${sc.hint}</small></div>
       <button class="shortcut-key" data-id="${id}">
-        ${sc.alt ? 'Alt+' : ''}${sc.key === 'Escape' ? 'Esc' : sc.key.toUpperCase()}
+        ${sc.alt ? 'Alt+' : ''}${sc.key === 'escape' ? 'Esc' : sc.key.toUpperCase()}
       </button>
     </div>`).join('');
-
   list.querySelectorAll('.shortcut-key').forEach(btn => {
     btn.addEventListener('click', () => {
-      /* clear any previous listening */
       if (listeningFor) {
         const prev = list.querySelector(`[data-id="${listeningFor}"]`);
         if (prev) prev.classList.remove('listening');
@@ -337,38 +334,58 @@ function renderShortcutsList() {
     });
   });
 }
-
-document.getElementById('shortcutsBtn').addEventListener('click', () => {
-  renderShortcutsList();
-  document.getElementById('shortcutsModal').classList.add('open');
-});
-document.getElementById('shortcutsModalClose').addEventListener('click', () => {
-  document.getElementById('shortcutsModal').classList.remove('open');
-  listeningFor = null;
-});
-document.getElementById('shortcutsModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('shortcutsModal')) {
-    document.getElementById('shortcutsModal').classList.remove('open');
-    listeningFor = null;
-  }
-});
+document.getElementById('shortcutsBtn').addEventListener('click', () => { renderShortcutsList(); document.getElementById('shortcutsModal').classList.add('open'); });
+document.getElementById('shortcutsModalClose').addEventListener('click', () => { document.getElementById('shortcutsModal').classList.remove('open'); listeningFor = null; });
+document.getElementById('shortcutsModal').addEventListener('click', e => { if(e.target===document.getElementById('shortcutsModal')){ document.getElementById('shortcutsModal').classList.remove('open'); listeningFor = null; }});
 
 /* ─── SETTINGS MODAL ────────────────────────────────── */
 document.getElementById('settingsBtn').addEventListener('click', () => {
-  document.getElementById('siteNameInput').value = siteName;
+  document.getElementById('fakeTitleInput').value = fakeTitle;
+  document.getElementById('fakeUrlInput').value   = fakeUrl;
+  document.getElementById('bgStyleSelect').value  = bgStyle;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color === accentColor));
+  document.getElementById('customColorPicker').value = accentColor;
+  document.querySelectorAll('.size-btn[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === cardSize));
+  document.querySelectorAll('.size-btn[data-width]').forEach(b => b.classList.toggle('active', b.dataset.width === sidebarWidth));
   document.getElementById('settingsModal').classList.add('open');
 });
 document.getElementById('settingsModalClose').addEventListener('click', () => document.getElementById('settingsModal').classList.remove('open'));
-document.getElementById('settingsModal').addEventListener('click', e => { if (e.target === document.getElementById('settingsModal')) document.getElementById('settingsModal').classList.remove('open'); });
+document.getElementById('settingsModal').addEventListener('click', e => { if(e.target===document.getElementById('settingsModal')) document.getElementById('settingsModal').classList.remove('open'); });
 document.getElementById('settingsThemeBtn').addEventListener('click', () => { darkMode = !darkMode; applyTheme(); showToast(darkMode ? '🌙 Dark mode' : '☀️ Light mode'); });
+
+/* color swatches */
+document.querySelectorAll('.swatch').forEach(s => {
+  s.addEventListener('click', () => applyAccent(s.dataset.color));
+});
+document.getElementById('customColorPicker').addEventListener('input', e => applyAccent(e.target.value));
+
+/* bg style */
+document.getElementById('bgStyleSelect').addEventListener('change', e => applyBg(e.target.value));
+
+/* card size buttons */
+document.querySelectorAll('.size-btn[data-size]').forEach(b => {
+  b.addEventListener('click', () => applyCardSize(b.dataset.size));
+});
+
+/* sidebar width buttons */
+document.querySelectorAll('.size-btn[data-width]').forEach(b => {
+  b.addEventListener('click', () => applySidebarWidth(b.dataset.width));
+});
+
+/* save settings */
 document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-  const val = document.getElementById('siteNameInput').value.trim();
-  if (val.length > 0) {
-    siteName = val;
-    applySiteName();
-    showToast('✅ Settings saved!');
-    document.getElementById('settingsModal').classList.remove('open');
-  }
+  fakeTitle = document.getElementById('fakeTitleInput').value.trim() || 'Google';
+  fakeUrl   = document.getElementById('fakeUrlInput').value.trim()   || 'google.com';
+  saveState();
+  showToast('✅ Settings saved!');
+  document.getElementById('settingsModal').classList.remove('open');
+});
+
+/* clear all data */
+document.getElementById('clearDataBtn').addEventListener('click', () => {
+  if (!confirm('Are you sure? This will wipe all your favorites, history, ratings, and stats.')) return;
+  ['vp_favs','vp_recent','vp_plays','vp_ratings','vp_best','vp_shortcuts','vp_sort','vp_view','vp_csize','vp_sbw','vp_accent','vp_bg','vp_ftitle','vp_furl','vp_theme'].forEach(k => localStorage.removeItem(k));
+  location.reload();
 });
 
 /* ─── RENDER CARD ───────────────────────────────────── */
@@ -383,13 +400,9 @@ function createCard(game, idx = 0) {
         ? `<img src="${game.thumb}" alt="${game.name}" loading="lazy" onerror="this.style.display='none'">`
         : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:42px;">🎮</div>`}
       <div class="card-overlay"></div>
-      <div class="card-play">
-        <div class="card-play-btn">
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        </div>
-      </div>
-      <button class="fav-btn ${fav ? 'active' : ''}" title="${fav ? 'Remove from favorites' : 'Add to favorites'}">
-        <svg width="13" height="13" fill="${fav ? '#fff' : 'none'}" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <div class="card-play"><div class="card-play-btn"><svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></div>
+      <button class="fav-btn ${fav?'active':''}" title="${fav?'Remove from favorites':'Add to favorites'}">
+        <svg width="13" height="13" fill="${fav?'#fff':'none'}" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </button>
     </div>
     <div class="card-body">
@@ -407,14 +420,10 @@ function openGame(game) {
   document.getElementById('playerTitle').textContent = game.name;
   document.getElementById('gameFrame').src = '';
   document.getElementById('loadingOverlay').classList.remove('hidden');
-  updatePlayerFavBtn();
-  populateSidebar(game);
-  openSidebar();
+  updatePlayerFavBtn(); populateSidebar(game); openSidebar();
   document.getElementById('gamePlayer').classList.add('open');
   document.body.style.overflow = 'hidden';
-  addRecent(game);
-  renderAll();
-  startTimer();
+  addRecent(game); renderAll(); startTimer();
   setTimeout(() => {
     document.getElementById('gameFrame').src = game.url;
     document.getElementById('gameFrame').onload = () => {
@@ -422,7 +431,6 @@ function openGame(game) {
     };
   }, 100);
 }
-
 function closeGame() {
   stopTimer();
   document.getElementById('gamePlayer').classList.remove('open');
@@ -430,49 +438,22 @@ function closeGame() {
   document.body.style.overflow = '';
   currentGame = null;
 }
-
 function updatePlayerFavBtn() {
   if (!currentGame) return;
-  const favBtn = document.getElementById('favInPlayer');
   const f = isFav(currentGame.name);
-  favBtn.innerHTML = `
-    <svg width="13" height="13" fill="${f ? '#fc5c7d' : 'none'}" stroke="${f ? '#fc5c7d' : 'currentColor'}" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+  document.getElementById('favInPlayer').innerHTML = `
+    <svg width="13" height="13" fill="${f?'#fc5c7d':'none'}" stroke="${f?'#fc5c7d':'currentColor'}" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
     ${f ? 'Unfavorite' : 'Favorite'}`;
 }
 
-/* ─── PIP MODE ──────────────────────────────────────── */
-document.getElementById('pipBtn').addEventListener('click', async () => {
-  const frame = document.getElementById('gameFrame');
-  try {
-    if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture();
-    } else {
-      /* create a video element to proxy PiP since iframes can't do PiP directly */
-      showToast('⚠️ PiP works best with video content. Use Fullscreen instead.');
-      /* fallback: open game in new tab */
-      if (currentGame) window.open(currentGame.url, '_blank');
-    }
-  } catch(e) {
-    if (currentGame) window.open(currentGame.url, '_blank');
-    showToast('Opening game in new tab');
-  }
-});
-
-/* ─── FILTER LOGIC ──────────────────────────────────── */
+/* ─── FILTER + SORT ─────────────────────────────────── */
 function getFilteredGames() {
   let list = [...GAMES];
-  if (currentCat === 'favorites') {
-    list = list.filter(g => isFav(g.name));
-  } else if (currentCat === 'recent') {
-    list = recentPlayed.map(n => GAMES.find(g => g.name === n)).filter(Boolean);
-  } else if (currentCat !== 'all') {
-    list = list.filter(g => g.cat === currentCat);
-  }
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    list = list.filter(g => g.name.toLowerCase().includes(q) || g.cat.toLowerCase().includes(q));
-  }
-  return list;
+  if (currentCat === 'favorites')     list = list.filter(g => isFav(g.name));
+  else if (currentCat === 'recent')   list = recentPlayed.map(n => GAMES.find(g => g.name === n)).filter(Boolean);
+  else if (currentCat !== 'all')      list = list.filter(g => g.cat === currentCat);
+  if (searchQuery) { const q = searchQuery.toLowerCase(); list = list.filter(g => g.name.toLowerCase().includes(q) || g.cat.toLowerCase().includes(q)); }
+  return sortGames(list);
 }
 
 /* ─── RENDER ALL ────────────────────────────────────── */
@@ -493,14 +474,12 @@ function renderAll() {
   grid.innerHTML = '';
   filtered.forEach((g, i) => grid.appendChild(createCard(g, i)));
 
-  const empty = document.getElementById('emptyState');
-  empty.classList.toggle('visible',
-    GAMES.length > 0 && filtered.length === 0 &&
-    ['all','favorites','recent'].includes(currentCat)
+  document.getElementById('emptyState').classList.toggle('visible',
+    GAMES.length > 0 && filtered.length === 0 && ['all','favorites','recent'].includes(currentCat)
   );
 
   const titles = { all:'All Games', favorites:'Favorites', recent:'Recently Played', action:'Action', puzzle:'Puzzle', io:'IO Games', sports:'Sports', racing:'Racing', adventure:'Adventure', casual:'Casual', other:'Other' };
-  document.getElementById('sectionTitle').innerHTML = `<span class="dot"></span> ${titles[currentCat] || 'Games'}`;
+  document.getElementById('sectionTitle').innerHTML = `<span class="dot"></span> ${titles[currentCat]||'Games'}`;
 
   const favSecGames = GAMES.filter(g => isFav(g.name));
   const favSec      = document.getElementById('favSection');
@@ -508,31 +487,24 @@ function renderAll() {
   favSecGrid.innerHTML = '';
   if (favSecGames.length > 0 && currentCat === 'all' && !searchQuery) {
     favSec.classList.add('visible');
-    favSecGames.forEach((g, i) => favSecGrid.appendChild(createCard(g, i)));
-  } else {
-    favSec.classList.remove('visible');
-  }
+    sortGames(favSecGames).forEach((g,i) => favSecGrid.appendChild(createCard(g,i)));
+  } else { favSec.classList.remove('visible'); }
 
   const recentSec = document.getElementById('recentSection');
   const chips     = document.getElementById('recentChips');
   chips.innerHTML = '';
   if (recentPlayed.length > 0 && currentCat === 'all' && !searchQuery) {
     recentSec.classList.add('visible');
-    recentPlayed.slice(0, 8).forEach(name => {
+    recentPlayed.slice(0,8).forEach(name => {
       const game = GAMES.find(g => g.name === name);
       if (!game) return;
       const chip = document.createElement('div');
       chip.className = 'recent-chip';
-      chip.innerHTML = `
-        <div class="recent-chip-thumb">
-          ${game.thumb ? `<img src="${game.thumb}" alt="${game.name}" loading="lazy">` : `<div class="chip-icon">🎮</div>`}
-        </div>${game.name}`;
+      chip.innerHTML = `<div class="recent-chip-thumb">${game.thumb?`<img src="${game.thumb}" alt="${game.name}" loading="lazy">`:`<div class="chip-icon">🎮</div>`}</div>${game.name}`;
       chip.addEventListener('click', () => openGame(game));
       chips.appendChild(chip);
     });
-  } else {
-    recentSec.classList.remove('visible');
-  }
+  } else { recentSec.classList.remove('visible'); }
 
   applyView();
   updatePlayerFavBtn();
@@ -549,12 +521,9 @@ document.querySelectorAll('.cat-btn').forEach(btn => {
 });
 
 /* ─── SEARCH ────────────────────────────────────────── */
-document.getElementById('searchInput').addEventListener('input', e => {
-  searchQuery = e.target.value.trim();
-  renderAll();
-});
+document.getElementById('searchInput').addEventListener('input', e => { searchQuery = e.target.value.trim(); renderAll(); });
 
-/* ─── RANDOM GAME ───────────────────────────────────── */
+/* ─── RANDOM ────────────────────────────────────────── */
 document.getElementById('randomBtn').addEventListener('click', () => {
   if (GAMES.length === 0) { showToast('Add some games first!'); return; }
   openGame(GAMES[Math.floor(Math.random() * GAMES.length)]);
@@ -563,14 +532,13 @@ document.getElementById('randomBtn').addEventListener('click', () => {
 /* ─── PLAYER BUTTONS ────────────────────────────────── */
 document.getElementById('backBtn').addEventListener('click', closeGame);
 document.getElementById('fullscreenBtn').addEventListener('click', () => {
-  const frame = document.getElementById('gameFrame');
-  if (frame.requestFullscreen) frame.requestFullscreen();
-  else if (frame.webkitRequestFullscreen) frame.webkitRequestFullscreen();
+  const f = document.getElementById('gameFrame');
+  if (f.requestFullscreen) f.requestFullscreen();
+  else if (f.webkitRequestFullscreen) f.webkitRequestFullscreen();
 });
 document.getElementById('favInPlayer').addEventListener('click', () => {
   if (!currentGame) return;
-  toggleFav(currentGame.name, null);
-  updatePlayerFavBtn();
+  toggleFav(currentGame.name, null); updatePlayerFavBtn();
 });
 
 /* ─── PANIC ─────────────────────────────────────────── */
@@ -578,62 +546,32 @@ let panicActive = false;
 function togglePanic() {
   panicActive = !panicActive;
   document.getElementById('panicOverlay').classList.toggle('active', panicActive);
-  document.title = panicActive ? 'Google' : `${siteName} — Free Games Online`;
+  document.title = panicActive ? fakeTitle : 'VaultPlay — Free Games Online';
 }
 document.getElementById('panicBtn').addEventListener('click', togglePanic);
 
 /* ─── KEYBOARD HANDLER ──────────────────────────────── */
 document.addEventListener('keydown', e => {
-  /* if shortcuts modal is listening for a new key */
   if (listeningFor) {
     e.preventDefault();
-    if (e.key === 'Escape') {
-      listeningFor = null;
-      renderShortcutsList();
-      return;
-    }
+    if (e.key === 'Escape') { listeningFor = null; renderShortcutsList(); return; }
     shortcuts[listeningFor].key = e.key.toLowerCase();
     shortcuts[listeningFor].alt = e.altKey;
-    listeningFor = null;
-    saveState();
-    renderShortcutsList();
-    showToast('✅ Shortcut updated!');
-    return;
+    listeningFor = null; saveState(); renderShortcutsList();
+    showToast('✅ Shortcut updated!'); return;
   }
-
-  /* don't fire shortcuts while typing in inputs */
-  if (e.target.tagName === 'INPUT') return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
   const sc = shortcuts;
-
-  /* close game */
-  if (e.key === sc.closeGame.key && document.getElementById('gamePlayer').classList.contains('open')) {
-    closeGame(); return;
+  if (e.key.toLowerCase() === sc.closeGame.key && document.getElementById('gamePlayer').classList.contains('open')) { closeGame(); return; }
+  if (e.key.toLowerCase() === sc.panic.key && (sc.panic.alt ? e.altKey : true)) { e.preventDefault(); togglePanic(); return; }
+  if (e.key.toLowerCase() === sc.random.key && !document.getElementById('gamePlayer').classList.contains('open')) {
+    if (GAMES.length > 0) openGame(GAMES[Math.floor(Math.random() * GAMES.length)]); return;
   }
-  /* panic */
-  if (e.key === sc.panic.key && (sc.panic.alt ? e.altKey : true)) {
-    e.preventDefault(); togglePanic(); return;
-  }
-  /* random */
-  if (e.key === sc.random.key && !document.getElementById('gamePlayer').classList.contains('open')) {
-    if (GAMES.length > 0) openGame(GAMES[Math.floor(Math.random() * GAMES.length)]);
-    return;
-  }
-  /* stats */
-  if (e.key === sc.stats.key && !document.getElementById('gamePlayer').classList.contains('open')) {
-    openStatsModal(); return;
-  }
-  /* shortcuts panel */
-  if (e.key === sc.shortcuts.key) {
-    renderShortcutsList();
-    document.getElementById('shortcutsModal').classList.toggle('open');
-    return;
-  }
-  /* toggle view */
-  if (e.key === sc.toggleView.key && !document.getElementById('gamePlayer').classList.contains('open')) {
-    compactView = !compactView; applyView();
-    showToast(compactView ? 'Compact view' : 'Grid view');
-    return;
+  if (e.key.toLowerCase() === sc.stats.key && !document.getElementById('gamePlayer').classList.contains('open')) { openStatsModal(); return; }
+  if (e.key === sc.shortcuts.key) { renderShortcutsList(); document.getElementById('shortcutsModal').classList.toggle('open'); return; }
+  if (e.key.toLowerCase() === sc.toggleView.key && !document.getElementById('gamePlayer').classList.contains('open')) {
+    compactView = !compactView; applyView(); showToast(compactView ? 'Compact view' : 'Grid view'); return;
   }
 });
 
@@ -641,7 +579,6 @@ document.addEventListener('keydown', e => {
 const themeBtn  = document.getElementById('themeBtn');
 const themeIcon = document.getElementById('themeIcon');
 let darkMode = localStorage.getItem('vp_theme') !== 'light';
-
 function applyTheme() {
   document.body.classList.toggle('light-mode', !darkMode);
   themeIcon.innerHTML = darkMode
@@ -653,6 +590,9 @@ themeBtn.addEventListener('click', () => { darkMode = !darkMode; applyTheme(); }
 applyTheme();
 
 /* ─── INIT ──────────────────────────────────────────── */
-applySiteName();
+applyAccent(accentColor);
+applyBg(bgStyle);
+applyCardSize(cardSize);
+applySidebarWidth(sidebarWidth);
 applyView();
 renderAll();
