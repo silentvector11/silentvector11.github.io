@@ -9,7 +9,7 @@
 const GAMES = [
   { name: "Slope",       cat: "action", url: "games/slope/index.html",       thumb: "thumbnails/slope.jpeg" },
   { name: "Drive Mad",   cat: "racing", url: "games/drive-mad/index.html",   thumb: "thumbnails/drive-mad.jpg" },
-  { name: "Crossy Road", cat: "casual", url: "games/crossyroad/index.html", thumb: "thumbnails/crossyroad.jpg" },
+  { name: "Crossy Road", cat: "casual", url: "games/crossyroad/index.html", thumb: "thumbnails/crossy-road.jpg" },
 ];
 
 /* ─── STATE ─────────────────────────────────────────── */
@@ -517,8 +517,8 @@ document.getElementById('panicBtn').addEventListener('click', triggerPanic);
 
 /* ─── KEYBOARD HANDLER ──────────────────────────────── */
 document.addEventListener('keydown', e => {
-  /* Ctrl+K spotlight */
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+  /* Alt+C spotlight */
+  if (e.altKey && e.key.toLowerCase() === 'c') {
     e.preventDefault(); openSpotlight(); return;
   }
   if (listeningFor) {
@@ -683,6 +683,7 @@ document.getElementById('spotlightInput').addEventListener('keydown', e => {
 document.getElementById('spotlightOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('spotlightOverlay')) closeSpotlight();
 });
+document.getElementById('spotlightBtn').addEventListener('click', openSpotlight);
 
 /* ─── THEME TOGGLE ──────────────────────────────────── */
 const themeBtn  = document.getElementById('themeBtn');
