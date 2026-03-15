@@ -61,21 +61,142 @@ function saveState() {
   localStorage.setItem('vp_tabtitle',  tabTitle);
 }
 
-/* ─── TOAST ─────────────────────────────────────────── */
+/* ─── TOAST (with auto icon) ────────────────────────── */
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
+  const t    = document.getElementById('toast');
+  const icon = document.getElementById('toastIcon');
+  const text = document.getElementById('toastMsg');
+  /* auto icon based on message content */
+  if      (msg.includes('✅') || msg.includes('saved') || msg.includes('updated')) icon.textContent = '✅';
+  else if (msg.includes('❤️') || msg.includes('favorites')) icon.textContent = '❤️';
+  else if (msg.includes('Removed'))  icon.textContent = '💔';
+  else if (msg.includes('Rated'))    icon.textContent = '⭐';
+  else if (msg.includes('reset'))    icon.textContent = '↺';
+  else if (msg.includes('view'))     icon.textContent = '⊞';
+  else if (msg.includes('mode'))     icon.textContent = '🌓';
+  else icon.textContent = 'ℹ️';
+  /* strip emoji from msg since icon handles it */
+  text.textContent = msg.replace(/^[✅❤️💔⭐↺⊞🌓ℹ️]\s*/,'').replace('❤️ ','');
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-/* ─── HELPERS ───────────────────────────────────────── */
+/* ─── SCROLL PROGRESS BAR ───────────────────────────── */
+window.addEventListener('scroll', () => {
+  const scrolled = window.scrollY;
+  const total    = document.body.scrollHeight - window.innerHeight;
+  const pct      = total > 0 ? (scrolled / total) * 100 : 0;
+  document.getElementById('scrollProgress').style.width = pct + '%';
+  /* back to top button */
+  const btn = document.getElementById('backToTop');
+  btn.classList.toggle('visible', scrolled > 300);
+});
+document.getElementById('backToTop').addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/* ─── SEARCH CLEAR BUTTON ───────────────────────────── */
+document.getElementById('searchInput').addEventListener('input', e => {
+  const val = e.target.value;
+  document.getElementById('searchClear').classList.toggle('visible', val.length > 0);
+  searchQuery = val.trim();
+  renderAll();
+});
+document.getElementById('searchClear').addEventListener('click', () => {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').classList.remove('visible');
+  searchQuery = '';
+  renderAll();
+  document.getElementById('searchInput').focus();
+});
+
+/* ─── PAGE LOAD SECTION ANIMATION ───────────────────── */
+function animateSections() {
+  const sections = document.querySelectorAll('.page-section');
+  sections.forEach((s, i) => {
+    setTimeout(() => s.classList.add('section-visible'), i * 120);
+  });
+  document.body.classList.remove('page-loading');
+}
+
+/* ─── SKELETON GRID ─────────────────────────────────── */
+function showSkeleton(count = 6) {
+  const sg = document.getElementById('skeletonGrid');
+  sg.classList.remove('hidden');
+  sg.innerHTML = Array.from({length: count}, () => `
+    <div class="skeleton-card">
+      <div class="skeleton-card-thumb"></div>
+      <div class="skeleton-card-body">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+    </div>`).join('');
+}
+function hideSkeleton() {
+  const sg = document.getElementById('skeletonGrid');
+  sg.classList.add('hidden');
+  sg.innerHTML = '';
+}
+
+/* ─── GRID TRANSITION ───────────────────────────────── */
+function transitionGrid(fn) {
+  const grid = document.getElementById('gameGrid');
+  grid.classList.add('transitioning');
+  grid.classList.remove('visible');
+  setTimeout(() => {
+    fn();
+    grid.classList.remove('transitioning');
+    grid.classList.add('visible');
+  }, 200);
+}
+
+/* ─── ACTIVE PILL SCROLL ────────────────────────────── */
+function scrollActivePill() {
+  const bar  = document.getElementById('catTopbar');
+  const pill = bar.querySelector('.cat-pill.active');
+  if (!pill) return;
+  const barRect  = bar.getBoundingClientRect();
+  const pillRect = pill.getBoundingClientRect();
+  const offset   = pillRect.left - barRect.left - (barRect.width / 2) + (pillRect.width / 2);
+  bar.scrollBy({ left: offset, behavior: 'smooth' });
+}
+
+/* ─── COUNT BADGE BOUNCE ────────────────────────────── */
+function bounceCount(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('bounce');
+  void el.offsetWidth; /* reflow */
+  el.classList.add('bounce');
+  el.addEventListener('animationend', () => el.classList.remove('bounce'), { once: true });
+}
+
+/* ─── FULLSCREEN DETECTION ──────────────────────────── */
+document.addEventListener('fullscreenchange', () => {
+  const bar = document.getElementById('playerBar');
+  if (document.fullscreenElement) bar.classList.add('bar-hidden');
+  else bar.classList.remove('bar-hidden');
+});
+document.addEventListener('keydown', e => {
+  /* pressing Escape from fullscreen also restores bar */
+  if (e.key === 'Escape' && !document.fullscreenElement) {
+    document.getElementById('playerBar').classList.remove('bar-hidden');
+  }
+}, true);
+
+
 function isFav(name) { return favorites.includes(name); }
 
 function toggleFav(name, e) {
   if (e) e.stopPropagation();
   if (isFav(name)) { favorites = favorites.filter(f => f !== name); showToast('Removed from favorites'); }
   else             { favorites.push(name); showToast('❤️ Added to favorites!'); }
+  /* heart pop on card */
+  if (e) {
+    const btn = e.currentTarget;
+    btn.classList.add('pop');
+    btn.addEventListener('animationend', () => btn.classList.remove('pop'), { once: true });
+  }
   saveState(); renderAll();
 }
 
@@ -115,9 +236,12 @@ function startTimer() {
   stopTimer();
   timerSeconds = 0;
   document.getElementById('gisTimer').textContent = '00:00';
+  document.getElementById('playerSessionClock').textContent = '00:00';
   timerInterval = setInterval(() => {
     timerSeconds++;
-    document.getElementById('gisTimer').textContent = formatTime(timerSeconds);
+    const t = formatTime(timerSeconds);
+    document.getElementById('gisTimer').textContent = t;
+    document.getElementById('playerSessionClock').textContent = t;
   }, 1000);
 }
 function stopTimer() {
@@ -132,6 +256,7 @@ function stopTimer() {
 function resetTimer() {
   timerSeconds = 0;
   document.getElementById('gisTimer').textContent = '00:00';
+  document.getElementById('playerSessionClock').textContent = '00:00';
 }
 
 /* ─── STAR RATING ───────────────────────────────────── */
@@ -476,42 +601,54 @@ function getFilteredGames() {
 /* ─── RENDER ALL ────────────────────────────────────── */
 function renderAll() {
   const filtered = getFilteredGames();
+  const prevCounts = {};
+  ['all','fav','recent','action','puzzle','io','sports','racing','adventure','casual','other'].forEach(c => {
+    const el = document.getElementById('cnt-'+c);
+    if (el) prevCounts[c] = el.textContent;
+  });
 
   /* counts */
-  document.getElementById('cnt-all').textContent    = GAMES.length;
-  document.getElementById('cnt-fav').textContent    = favorites.length;
-  document.getElementById('cnt-recent').textContent = recentPlayed.length;
-  ['action','puzzle','io','sports','racing','adventure','casual','other'].forEach(c => {
+  const newCounts = {
+    all: GAMES.length, fav: favorites.length, recent: recentPlayed.length,
+    action: GAMES.filter(g=>g.cat==='action').length,
+    puzzle: GAMES.filter(g=>g.cat==='puzzle').length,
+    io:     GAMES.filter(g=>g.cat==='io').length,
+    sports: GAMES.filter(g=>g.cat==='sports').length,
+    racing: GAMES.filter(g=>g.cat==='racing').length,
+    adventure: GAMES.filter(g=>g.cat==='adventure').length,
+    casual: GAMES.filter(g=>g.cat==='casual').length,
+    other:  GAMES.filter(g=>g.cat==='other').length,
+  };
+  Object.entries(newCounts).forEach(([c, val]) => {
     const el = document.getElementById('cnt-'+c);
-    if (el) el.textContent = GAMES.filter(g => g.cat === c).length;
+    if (!el) return;
+    el.textContent = val;
+    if (String(prevCounts[c]) !== String(val)) bounceCount('cnt-'+c);
   });
 
   /* notices */
   document.getElementById('addNotice').style.display = GAMES.length === 0 ? 'block' : 'none';
 
-  /* main grid */
+  /* skeleton then grid */
+  hideSkeleton();
   const grid = document.getElementById('gameGrid');
+  grid.classList.add('visible');
   grid.innerHTML = '';
   filtered.forEach((g,i) => grid.appendChild(createCard(g,i)));
 
   /* empty states */
   document.getElementById('emptyState').classList.toggle('visible',
-    GAMES.length > 0 && filtered.length === 0 && currentCat === 'all' && !!searchQuery
-  );
+    GAMES.length > 0 && filtered.length === 0 && currentCat === 'all' && !!searchQuery);
   document.getElementById('emptyFavState').classList.toggle('visible',
-    currentCat === 'favorites' && filtered.length === 0
-  );
+    currentCat === 'favorites' && filtered.length === 0);
   document.getElementById('emptyRecentState').classList.toggle('visible',
-    currentCat === 'recent' && filtered.length === 0
-  );
+    currentCat === 'recent' && filtered.length === 0);
 
-  /* section title with count */
+  /* section title */
   const catLabels = { all:'All Games', favorites:'Favorites', recent:'Recently Played', action:'Action', puzzle:'Puzzle', io:'IO Games', sports:'Sports', racing:'Racing', adventure:'Adventure', casual:'Casual', other:'Other' };
   const catIcons  = { all:'🎮', favorites:'❤️', recent:'🕐', action:'⚔️', puzzle:'🧩', io:'🌐', sports:'⚽', racing:'🏎️', adventure:'🗺️', casual:'🎈', other:'✨' };
-  const label = catLabels[currentCat] || 'Games';
-  const count = filtered.length;
   document.getElementById('sectionTitle').innerHTML =
-    `<span class="dot"></span> ${catIcons[currentCat]||''} ${label} <span class="section-count">(${count})</span>`;
+    `<span class="section-accent"></span> ${catIcons[currentCat]||''} ${catLabels[currentCat]||'Games'} <span class="section-count">(${filtered.length})</span>`;
 
   /* favorites mini-section on home */
   const favSecGames = GAMES.filter(g => isFav(g.name));
@@ -559,14 +696,12 @@ document.querySelectorAll('.cat-pill').forEach(btn => {
     document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentCat = btn.dataset.cat;
-    /* scroll to top when switching categories */
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    renderAll();
+    scrollActivePill();
+    showSkeleton(6);
+    setTimeout(() => renderAll(), 180);
   });
 });
-
-/* ─── SEARCH ────────────────────────────────────────── */
-document.getElementById('searchInput').addEventListener('input', e => { searchQuery = e.target.value.trim(); renderAll(); });
 
 /* ─── RANDOM ────────────────────────────────────────── */
 document.getElementById('randomBtn').addEventListener('click', () => {
@@ -625,7 +760,10 @@ function renderSpotlight(query) {
     container.innerHTML = `<div class="spotlight-empty"><span>🔍</span>No games found</div>`;
     return;
   }
-  container.innerHTML = list.map((game,i) => {
+  const sectionLabel = !q && spotlightCat === 'all'
+    ? `<div class="spotlight-section-label">Recently Played & Most Played</div>` : '';
+
+  container.innerHTML = sectionLabel + list.map((game,i) => {
     const plays  = playCounts[game.name] || 0;
     const rating = ratings[game.name] || 0;
     const fav    = isFav(game.name);
@@ -742,3 +880,7 @@ applyCardSize(cardSize);
 applyTabTitle();
 applyView();
 renderAll();
+/* stagger page sections in */
+requestAnimationFrame(() => animateSections());
+/* center active pill on load */
+setTimeout(() => scrollActivePill(), 100);

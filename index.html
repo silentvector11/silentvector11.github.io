@@ -8,14 +8,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="page-loading">
+
+  <!-- ══ SCROLL PROGRESS BAR ═══════════════════════════════ -->
+  <div id="scrollProgress"></div>
 
   <!-- ══ NAV ══════════════════════════════════════════════ -->
-  <nav>
+  <nav id="mainNav">
     <div class="nav-logo" id="navLogo">Vault<span>Play</span></div>
     <div class="nav-search-wrap">
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="searchInput" placeholder="Search games…" autocomplete="off"/>
+      <button class="search-clear" id="searchClear" title="Clear search">✕</button>
     </div>
     <div class="nav-actions">
       <div class="nav-clock" id="navClock">12:00:00 PM</div>
@@ -70,7 +74,6 @@
         <button class="cat-pill" data-cat="other">✨ Other <span class="cat-count" id="cnt-other">0</span></button>
       </div>
       <div class="cat-divider"></div>
-      <!-- Sort moved here contextually -->
       <div class="cat-sort-wrap">
         <select class="sort-select" id="sortSelect" title="Sort games">
           <option value="default">Default</option>
@@ -87,26 +90,23 @@
   <div class="page-wrap" id="pageWrap">
     <main>
 
-      <!-- Recently Played -->
-      <section id="recentSection">
+      <section id="recentSection" class="page-section">
         <div class="section-header">
-          <div class="section-title"><span class="dot"></span> Recently Played</div>
+          <div class="section-title"><span class="section-accent"></span> Recently Played</div>
         </div>
         <div class="recent-chips" id="recentChips"></div>
       </section>
 
-      <!-- Favorites -->
-      <section id="favSection">
+      <section id="favSection" class="page-section">
         <div class="section-header">
-          <div class="section-title"><span class="dot"></span> Your Favorites</div>
+          <div class="section-title"><span class="section-accent"></span> Your Favorites</div>
         </div>
         <div class="game-grid" id="favGrid"></div>
       </section>
 
-      <!-- All Games -->
-      <section id="allGamesSection">
+      <section id="allGamesSection" class="page-section">
         <div class="section-header">
-          <div class="section-title" id="sectionTitle"><span class="dot"></span> All Games</div>
+          <div class="section-title" id="sectionTitle"><span class="section-accent"></span> All Games</div>
         </div>
         <div class="add-games-notice" id="addNotice">
           <div class="notice-icon">🕹️</div>
@@ -114,41 +114,35 @@
           <p class="notice-sub">Add your games to the <code>GAMES</code> array in <strong>script.js</strong>.</p>
           <div class="notice-code">{ name: "Game Name", cat: "action",<br>&nbsp;&nbsp;url: "games/folder/index.html",<br>&nbsp;&nbsp;thumb: "thumbnails/name.png" }</div>
         </div>
+        <!-- Skeleton grid shown during render -->
+        <div class="skeleton-grid" id="skeletonGrid"></div>
         <div class="game-grid" id="gameGrid"></div>
-        <div class="empty-state" id="emptyState">
-          <div class="empty-icon">🔍</div>
-          <h3>No results found</h3>
-          <p>Try a different search term or category.</p>
-        </div>
-        <!-- Empty favorites state -->
-        <div class="empty-state" id="emptyFavState">
-          <div class="empty-icon">❤️</div>
-          <h3>No favorites yet</h3>
-          <p>Click the ❤️ on any game card to add it here.</p>
-        </div>
-        <!-- Empty recent state -->
-        <div class="empty-state" id="emptyRecentState">
-          <div class="empty-icon">🕐</div>
-          <h3>Nothing played yet</h3>
-          <p>Start playing a game and it will show up here.</p>
-        </div>
+        <div class="empty-state" id="emptyState"><div class="empty-icon">🔍</div><h3>No results found</h3><p>Try a different search term or category.</p></div>
+        <div class="empty-state" id="emptyFavState"><div class="empty-icon">❤️</div><h3>No favorites yet</h3><p>Click the ❤️ on any game card to add it here.</p></div>
+        <div class="empty-state" id="emptyRecentState"><div class="empty-icon">🕐</div><h3>Nothing played yet</h3><p>Start playing a game and it will show up here.</p></div>
       </section>
 
     </main>
   </div>
 
+  <!-- ══ BACK TO TOP ════════════════════════════════════════ -->
+  <button class="back-to-top" id="backToTop" title="Back to top">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg>
+  </button>
+
   <!-- ══ GAME PLAYER ══════════════════════════════════════ -->
   <div id="gamePlayer">
-    <div class="player-bar">
+    <div class="player-bar" id="playerBar">
       <button class="player-back" id="backBtn">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
         Back
       </button>
-      <!-- Game icon + title -->
       <div class="player-game-info">
         <div class="player-game-thumb" id="playerThumb"></div>
         <div class="player-title" id="playerTitle">Game</div>
       </div>
+      <!-- Live session clock in player bar -->
+      <div class="player-session-clock" id="playerSessionClock">00:00</div>
       <div class="player-actions">
         <button class="player-btn" id="favInPlayer">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -166,7 +160,6 @@
     </div>
     <div class="player-body">
       <div class="player-frame-wrap">
-        <!-- Enhanced loading overlay -->
         <div id="loadingOverlay">
           <div class="loading-game-thumb" id="loadingThumb"></div>
           <div class="loading-game-name" id="loadingName"></div>
@@ -175,7 +168,6 @@
         </div>
         <iframe id="gameFrame" allowfullscreen></iframe>
       </div>
-      <!-- Game Info Sidebar -->
       <div class="game-info-sidebar" id="gameInfoSidebar">
         <div class="gis-header">
           <span class="gis-title">Game Info</span>
@@ -212,84 +204,51 @@
 
   <!-- ══ STATS MODAL ══════════════════════════════════════ -->
   <div class="modal-overlay" id="statsModal">
-    <div class="modal">
-      <div class="modal-header">
-        <div class="modal-title">📊 Personal Stats</div>
-        <button class="modal-close" id="statsModalClose">✕</button>
-      </div>
-      <div class="modal-body" id="statsModalBody"></div>
-    </div>
+    <div class="modal"><div class="modal-header"><div class="modal-title">📊 Personal Stats</div><button class="modal-close" id="statsModalClose">✕</button></div><div class="modal-body" id="statsModalBody"></div></div>
   </div>
 
   <!-- ══ SHORTCUTS MODAL ══════════════════════════════════ -->
   <div class="modal-overlay" id="shortcutsModal">
-    <div class="modal">
-      <div class="modal-header">
-        <div class="modal-title">⌨️ Keyboard Shortcuts</div>
-        <button class="modal-close" id="shortcutsModalClose">✕</button>
-      </div>
-      <div class="modal-body">
-        <p style="color:var(--muted);font-size:13px;margin-bottom:18px;">Click a key badge then press your new key combination. You can use plain keys, Alt+key, or Ctrl+key. Press Esc to cancel.</p>
-        <div id="shortcutsList"></div>
-      </div>
-    </div>
+    <div class="modal"><div class="modal-header"><div class="modal-title">⌨️ Keyboard Shortcuts</div><button class="modal-close" id="shortcutsModalClose">✕</button></div>
+    <div class="modal-body"><p style="color:var(--muted);font-size:13px;margin-bottom:18px;">Click a key badge then press your new key combination. You can use plain keys, Alt+key, or Ctrl+key. Press Esc to cancel.</p><div id="shortcutsList"></div></div></div>
   </div>
 
   <!-- ══ SETTINGS MODAL ═══════════════════════════════════ -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal">
-      <div class="modal-header">
-        <div class="modal-title">⚙️ Settings</div>
-        <button class="modal-close" id="settingsModalClose">✕</button>
-      </div>
+      <div class="modal-header"><div class="modal-title">⚙️ Settings</div><button class="modal-close" id="settingsModalClose">✕</button></div>
       <div class="modal-body">
-
-        <!-- Tab Disguiser -->
         <div class="settings-section">
           <div class="settings-section-title">🕵️ Tab Disguiser</div>
           <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">Tab Title</div>
-              <div class="setting-hint">What shows in your browser tab permanently</div>
-            </div>
+            <div class="setting-label"><div class="setting-name">Tab Title</div><div class="setting-hint">What shows in your browser tab permanently</div></div>
             <input class="setting-input" id="tabTitleInput" type="text" placeholder="e.g. Google Docs" maxlength="40" style="width:160px"/>
           </div>
           <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">Current Tab Title</div>
-              <div class="setting-hint">Click Reset to restore original</div>
-            </div>
+            <div class="setting-label"><div class="setting-name">Current Tab Title</div><div class="setting-hint">Click Reset to restore original</div></div>
             <div style="display:flex;gap:8px;align-items:center">
               <span id="currentTabTitle" style="font-size:13px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
               <button class="setting-btn" id="resetTabTitleBtn">Reset</button>
             </div>
           </div>
         </div>
-
-        <!-- Appearance -->
         <div class="settings-section">
           <div class="settings-section-title">🎨 Appearance</div>
           <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">Accent Color</div>
-              <div class="setting-hint">Changes instantly as you pick</div>
-            </div>
-            <div class="color-swatches" id="colorSwatches">
-              <button class="swatch active" data-color="#7c5cfc" style="background:#7c5cfc" title="Purple"></button>
-              <button class="swatch" data-color="#3b82f6" style="background:#3b82f6" title="Blue"></button>
-              <button class="swatch" data-color="#10b981" style="background:#10b981" title="Green"></button>
-              <button class="swatch" data-color="#f59e0b" style="background:#f59e0b" title="Amber"></button>
-              <button class="swatch" data-color="#ef4444" style="background:#ef4444" title="Red"></button>
-              <button class="swatch" data-color="#ec4899" style="background:#ec4899" title="Pink"></button>
-              <button class="swatch" data-color="#06b6d4" style="background:#06b6d4" title="Cyan"></button>
-              <input type="color" id="customColorPicker" class="custom-color-input" title="Custom color" value="#7c5cfc"/>
+            <div class="setting-label"><div class="setting-name">Accent Color</div><div class="setting-hint">Changes instantly as you pick</div></div>
+            <div class="color-swatches">
+              <button class="swatch active" data-color="#7c5cfc" style="background:#7c5cfc"></button>
+              <button class="swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
+              <button class="swatch" data-color="#10b981" style="background:#10b981"></button>
+              <button class="swatch" data-color="#f59e0b" style="background:#f59e0b"></button>
+              <button class="swatch" data-color="#ef4444" style="background:#ef4444"></button>
+              <button class="swatch" data-color="#ec4899" style="background:#ec4899"></button>
+              <button class="swatch" data-color="#06b6d4" style="background:#06b6d4"></button>
+              <input type="color" id="customColorPicker" class="custom-color-input" value="#7c5cfc"/>
             </div>
           </div>
           <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">Background Style</div>
-              <div class="setting-hint">Visual style of the page background</div>
-            </div>
+            <div class="setting-label"><div class="setting-name">Background Style</div><div class="setting-hint">Visual style of the page background</div></div>
             <select class="setting-select" id="bgStyleSelect">
               <option value="default">Default (Dark)</option>
               <option value="gradient">Gradient Mesh</option>
@@ -299,10 +258,7 @@
             </select>
           </div>
           <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">Card Size</div>
-              <div class="setting-hint">Size of game cards in the grid</div>
-            </div>
+            <div class="setting-label"><div class="setting-name">Card Size</div><div class="setting-hint">Changes instantly</div></div>
             <div class="size-btns">
               <button class="size-btn" data-size="small">S</button>
               <button class="size-btn active" data-size="medium">M</button>
@@ -310,26 +266,17 @@
             </div>
           </div>
           <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">Theme</div>
-              <div class="setting-hint">Toggle between dark and light mode</div>
-            </div>
+            <div class="setting-label"><div class="setting-name">Theme</div><div class="setting-hint">Toggle dark / light mode</div></div>
             <button class="setting-btn" id="settingsThemeBtn">Toggle Theme</button>
           </div>
         </div>
-
-        <!-- Danger Zone -->
         <div class="settings-section">
           <div class="settings-section-title danger-title">⚠️ Danger Zone</div>
           <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">Clear All Data</div>
-              <div class="setting-hint">Wipes favorites, history, ratings, stats and settings</div>
-            </div>
+            <div class="setting-label"><div class="setting-name">Clear All Data</div><div class="setting-hint">Wipes favorites, history, ratings, stats and settings</div></div>
             <button class="setting-btn danger-btn" id="clearDataBtn">Clear Data</button>
           </div>
         </div>
-
         <button class="setting-save" id="saveSettingsBtn">Save Changes</button>
       </div>
     </div>
@@ -343,7 +290,6 @@
         <input type="text" id="spotlightInput" placeholder="Search games…" autocomplete="off" spellcheck="false"/>
         <kbd class="spotlight-esc">Esc</kbd>
       </div>
-      <!-- Category filter pills inside spotlight -->
       <div class="spotlight-cats" id="spotlightCats">
         <button class="spot-cat active" data-cat="all">All</button>
         <button class="spot-cat" data-cat="action">⚔️ Action</button>
@@ -366,7 +312,7 @@
   </div>
 
   <!-- ══ TOAST ════════════════════════════════════════════ -->
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast"><span class="toast-icon" id="toastIcon"></span><span id="toastMsg"></span></div>
   <canvas id="bgCanvas"></canvas>
   <script src="script.js"></script>
 </body>
