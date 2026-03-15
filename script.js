@@ -34,13 +34,13 @@ let sidebarVisible = true;
 
 /* ─── SHORTCUTS ─────────────────────────────────────── */
 const DEFAULT_SHORTCUTS = {
-  random:     { key: 'r',      alt: false, desc: 'Random Game',     hint: 'Opens a random game' },
-  panic:      { key: 'x',      alt: true,  desc: 'Panic (Alt+X)',   hint: 'Redirects to Google' },
-  closeGame:  { key: 'escape', alt: false, desc: 'Close Game',      hint: 'Closes the game player' },
-  stats:      { key: 's',      alt: false, desc: 'Stats',           hint: 'Opens personal stats' },
-  shortcuts:  { key: '?',      alt: false, desc: 'Shortcuts Panel', hint: 'Opens this panel' },
-  toggleView: { key: 'v',      alt: false, desc: 'Toggle View',     hint: 'Grid / Compact view' },
-  spotlight:  { key: 'c',      alt: true,  desc: 'Spotlight (Alt+C)',hint: 'Opens game search' },
+  random:     { key: 'r',      alt: false, ctrl: false, desc: 'Random Game',      hint: 'Opens a random game' },
+  panic:      { key: 'x',      alt: true,  ctrl: false, desc: 'Panic',            hint: 'Redirects to Google' },
+  closeGame:  { key: 'escape', alt: false, ctrl: false, desc: 'Close Game',       hint: 'Closes the game player' },
+  stats:      { key: 's',      alt: false, ctrl: false, desc: 'Stats',            hint: 'Opens personal stats' },
+  shortcuts:  { key: '?',      alt: false, ctrl: false, desc: 'Shortcuts Panel',  hint: 'Opens this panel' },
+  toggleView: { key: 'v',      alt: false, ctrl: false, desc: 'Toggle View',      hint: 'Grid / Compact view' },
+  spotlight:  { key: 'c',      alt: true,  ctrl: false, desc: 'Spotlight',        hint: 'Opens game search' },
 };
 let shortcuts    = JSON.parse(localStorage.getItem('vp_shortcuts') || 'null') || JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS));
 let listeningFor = null;
@@ -313,13 +313,14 @@ document.getElementById('statsModal').addEventListener('click', e => { if(e.targ
 /* ─── SHORTCUTS MODAL ───────────────────────────────── */
 function renderShortcutsList() {
   const list = document.getElementById('shortcutsList');
-  list.innerHTML = Object.entries(shortcuts).map(([id,sc]) => `
-    <div class="shortcut-row">
+  list.innerHTML = Object.entries(shortcuts).map(([id,sc]) => {
+    const modifiers = [sc.ctrl ? 'Ctrl+' : '', sc.alt ? 'Alt+' : ''].join('');
+    const keyLabel  = sc.key === 'escape' ? 'Esc' : sc.key.toUpperCase();
+    return `<div class="shortcut-row">
       <div class="shortcut-desc">${sc.desc}<small>${sc.hint}</small></div>
-      <button class="shortcut-key" data-id="${id}">
-        ${sc.alt ? 'Alt+' : ''}${sc.key === 'escape' ? 'Esc' : sc.key.toUpperCase()}
-      </button>
-    </div>`).join('');
+      <button class="shortcut-key" data-id="${id}">${modifiers}${keyLabel}</button>
+    </div>`;
+  }).join('');
   list.querySelectorAll('.shortcut-key').forEach(btn => {
     btn.addEventListener('click', () => {
       if (listeningFor) { const p = list.querySelector(`[data-id="${listeningFor}"]`); if(p) p.classList.remove('listening'); }
@@ -685,33 +686,39 @@ document.addEventListener('keydown', e => {
     /* ignore modifier-only keypresses — wait for the actual key */
     if (['Alt','Control','Shift','Meta'].includes(e.key)) return;
     if (e.key === 'Escape') { listeningFor = null; renderShortcutsList(); return; }
-    shortcuts[listeningFor].key = e.key.toLowerCase();
-    shortcuts[listeningFor].alt = e.altKey;
+    shortcuts[listeningFor].key  = e.key.toLowerCase();
+    shortcuts[listeningFor].alt  = e.altKey;
+    shortcuts[listeningFor].ctrl = e.ctrlKey;
     listeningFor = null; saveState(); renderShortcutsList();
     showToast('✅ Shortcut updated!'); return;
   }
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
-  /* spotlight: Alt+C (checked after listeningFor so it can be rebound) */
-  if (e.altKey && e.key.toLowerCase() === 'c') { e.preventDefault(); openSpotlight(); return; }
+  /* helper — key must match AND modifiers must match exactly */
+  function matches(sc) {
+    return e.key.toLowerCase() === sc.key
+      && !!e.altKey  === !!sc.alt
+      && !!e.ctrlKey === !!sc.ctrl;
+  }
 
   const sc = shortcuts;
-  /* close game — escape */
-  if (e.key.toLowerCase() === sc.closeGame.key && !sc.closeGame.alt && document.getElementById('gamePlayer').classList.contains('open')) { closeGame(); return; }
-  /* panic — Alt+X */
-  if (e.key.toLowerCase() === sc.panic.key && (sc.panic.alt ? e.altKey : true)) { e.preventDefault(); triggerPanic(); return; }
+  /* close game */
+  if (matches(sc.closeGame) && document.getElementById('gamePlayer').classList.contains('open')) { e.preventDefault(); closeGame(); return; }
+  /* panic */
+  if (matches(sc.panic)) { e.preventDefault(); triggerPanic(); return; }
+  /* spotlight */
+  if (matches(sc.spotlight)) { e.preventDefault(); openSpotlight(); return; }
+
+  /* below shortcuts only fire when game player is closed */
+  if (document.getElementById('gamePlayer').classList.contains('open')) return;
   /* random */
-  if (e.key.toLowerCase() === sc.random.key && !sc.random.alt && !document.getElementById('gamePlayer').classList.contains('open')) {
-    if (GAMES.length) openGame(GAMES[Math.floor(Math.random()*GAMES.length)]); return;
-  }
+  if (matches(sc.random)) { if (GAMES.length) openGame(GAMES[Math.floor(Math.random()*GAMES.length)]); return; }
   /* stats */
-  if (e.key.toLowerCase() === sc.stats.key && !sc.stats.alt && !document.getElementById('gamePlayer').classList.contains('open')) { openStatsModal(); return; }
+  if (matches(sc.stats)) { openStatsModal(); return; }
   /* shortcuts panel */
-  if (e.key === sc.shortcuts.key) { renderShortcutsList(); document.getElementById('shortcutsModal').classList.toggle('open'); return; }
+  if (matches(sc.shortcuts)) { renderShortcutsList(); document.getElementById('shortcutsModal').classList.toggle('open'); return; }
   /* toggle view */
-  if (e.key.toLowerCase() === sc.toggleView.key && !sc.toggleView.alt && !document.getElementById('gamePlayer').classList.contains('open')) {
-    compactView = !compactView; applyView(); showToast(compactView ? 'Compact view' : 'Grid view'); return;
-  }
+  if (matches(sc.toggleView)) { compactView = !compactView; applyView(); showToast(compactView ? 'Compact view' : 'Grid view'); return; }
 });
 
 /* ─── THEME TOGGLE ──────────────────────────────────── */
