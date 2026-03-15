@@ -1051,7 +1051,89 @@ document.addEventListener('keydown', e => {
   if (matches(sc.toggleView)) { compactView = !compactView; applyView(); showToast(compactView ? 'Compact view' : 'Grid view'); return; }
 });
 
-/* ─── SPLIT SCREEN EVENTS ───────────────────────────── */
+/* ─── MUTE ───────────────────────────────────────────── */
+let gameMuted = false;
+
+const MUTE_ICON_ON  = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>`;
+const MUTE_ICON_OFF = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>`;
+
+function setFrameMuted(frameEl, muted) {
+  /* iframe.muted is the standard browser attribute — works on chromium browsers */
+  frameEl.muted = muted;
+  /* also set the attribute for browsers that need it */
+  if (muted) frameEl.setAttribute('muted', '');
+  else frameEl.removeAttribute('muted');
+  /* reload src to apply muted state — browsers require this */
+  const src = frameEl.src;
+  if (src) {
+    frameEl.src = '';
+    setTimeout(() => { frameEl.src = src; }, 50);
+  }
+}
+
+function applyMuteUI() {
+  const btn   = document.getElementById('muteBtn');
+  const icon  = document.getElementById('muteIcon');
+  const label = document.getElementById('muteBtnLabel');
+  const wrap  = document.querySelector('.player-frame-wrap');
+  if (!btn) return;
+  btn.classList.toggle('muted', gameMuted);
+  icon.innerHTML = gameMuted ? MUTE_ICON_OFF : MUTE_ICON_ON;
+  label.textContent = gameMuted ? 'Unmute' : 'Mute';
+  wrap.classList.toggle('muted-frame', gameMuted);
+}
+
+document.getElementById('muteBtn').addEventListener('click', () => {
+  gameMuted = !gameMuted;
+  const frame = document.getElementById('gameFrame');
+  setFrameMuted(frame, gameMuted);
+  applyMuteUI();
+  showToast(gameMuted ? '🔇 Game muted' : '🔊 Game unmuted');
+});
+
+/* reset mute when closing game */
+const _origCloseGame = closeGame;
+closeGame = function() {
+  gameMuted = false;
+  applyMuteUI();
+  _origCloseGame();
+};
+
+/* ─── SPLIT MUTE ─────────────────────────────────────── */
+let splitMuted1 = false;
+let splitMuted2 = false;
+
+function applySplitMuteUI(which) {
+  const muted = which === 1 ? splitMuted1 : splitMuted2;
+  const btn   = document.getElementById(`splitMute${which}`);
+  const pane  = document.getElementById(`splitFrame${which}`).parentElement;
+  const icon  = btn.querySelector('.split-mute-icon');
+  btn.classList.toggle('muted', muted);
+  pane.classList.toggle('muted-pane', muted);
+  icon.innerHTML = muted ? MUTE_ICON_OFF : MUTE_ICON_ON;
+}
+
+document.getElementById('splitMute1').addEventListener('click', () => {
+  splitMuted1 = !splitMuted1;
+  setFrameMuted(document.getElementById('splitFrame1'), splitMuted1);
+  applySplitMuteUI(1);
+  showToast(splitMuted1 ? '🔇 Game 1 muted' : '🔊 Game 1 unmuted');
+});
+
+document.getElementById('splitMute2').addEventListener('click', () => {
+  splitMuted2 = !splitMuted2;
+  setFrameMuted(document.getElementById('splitFrame2'), splitMuted2);
+  applySplitMuteUI(2);
+  showToast(splitMuted2 ? '🔇 Game 2 muted' : '🔊 Game 2 unmuted');
+});
+
+/* reset split mutes when closing */
+const _origCloseSplit = closeSplitScreen;
+closeSplitScreen = function() {
+  splitMuted1 = false; splitMuted2 = false;
+  applySplitMuteUI(1); applySplitMuteUI(2);
+  _origCloseSplit();
+};
 document.getElementById('splitCloseBtn').addEventListener('click', closeSplitScreen);
 document.getElementById('splitSwapBtn').addEventListener('click', () => {
   if (!splitGame1 || !splitGame2) return;
@@ -1067,22 +1149,7 @@ document.getElementById('splitSwapBtn').addEventListener('click', () => {
   showToast('Games swapped');
 });
 
-/* drag to resize split panes */
-(function() {
-  const divider = document.getElementById('splitDivider');
-  let dragging  = false;
-  divider.addEventListener('mousedown', () => { dragging = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; });
-  document.addEventListener('mouseup',  () => { dragging = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; });
-  document.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const body = document.getElementById('splitScreen').querySelector('.split-body');
-    const rect = body.getBoundingClientRect();
-    const pct  = Math.max(20, Math.min(80, ((e.clientX - rect.left) / rect.width) * 100));
-    const panes = body.querySelectorAll('.split-pane');
-    panes[0].style.flex = `0 0 ${pct}%`;
-    panes[1].style.flex = `0 0 ${100 - pct}%`;
-  });
-})();
+/* drag to resize split panes - removed, using fixed 50/50 split */
 
 /* ─── INCOGNITO INDICATOR ───────────────────────────── */
 function updateIncognitoIndicator() {

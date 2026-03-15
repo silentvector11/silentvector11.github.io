@@ -144,6 +144,10 @@
       <!-- Live session clock in player bar -->
       <div class="player-session-clock" id="playerSessionClock">00:00</div>
       <div class="player-actions">
+        <button class="player-btn" id="muteBtn" title="Mute/Unmute game">
+          <svg id="muteIcon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <span id="muteBtnLabel">Mute</span>
+        </button>
         <button class="player-btn" id="favInPlayer">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           Favorite
@@ -379,12 +383,18 @@
       <div class="split-game-info">
         <div class="split-thumb" id="splitThumb1"></div>
         <span class="split-title" id="splitTitle1">Game 1</span>
+        <button class="split-mute-btn" id="splitMute1" title="Mute Game 1">
+          <svg class="split-mute-icon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </button>
       </div>
       <div class="split-center-controls">
         <span class="split-label">⊞ Split Screen</span>
         <button class="split-swap" id="splitSwapBtn" title="Swap games">⇄</button>
       </div>
       <div class="split-game-info" style="justify-content:flex-end">
+        <button class="split-mute-btn" id="splitMute2" title="Mute Game 2">
+          <svg class="split-mute-icon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </button>
         <span class="split-title" id="splitTitle2">Pick a game →</span>
         <div class="split-thumb" id="splitThumb2"></div>
       </div>
@@ -394,7 +404,6 @@
       <div class="split-pane">
         <iframe id="splitFrame1" allowfullscreen></iframe>
       </div>
-      <div class="split-divider" id="splitDivider"></div>
       <div class="split-pane">
         <iframe id="splitFrame2" allowfullscreen></iframe>
         <!-- pick game overlay -->
