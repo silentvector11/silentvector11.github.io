@@ -93,38 +93,54 @@ function getSessionId() {
 }
 
 async function updatePresence() {
-  if (!db) return;
-  try {
-    await db.from('presence').upsert(
-      { session_id: getSessionId(), last_seen: new Date().toISOString() },
-      { onConflict: 'session_id' }
-    );
-  } catch (e) { /* silently ignore network errors */ }
+  if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_PROJECT_URL_HERE') return;
+  const url = SUPABASE_URL + '/rest/v1/presence';
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify({
+      session_id: getSessionId(),
+      last_seen: new Date().toISOString()
+    })
+  }).catch(function(e) { console.warn('updatePresence error:', e.message); });
 }
 
-async function fetchLiveCount() {
-  if (!db) return;
-  try {
-    const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-    const { count, error } = await db
-      .from('presence')
-      .select('*', { count: 'exact', head: true })
-      .gte('last_seen', cutoff);
-    const el = document.getElementById('liveCountNum');
-    if (error) {
-      console.warn('Presence fetch error:', error.message);
-      if (el) el.textContent = '—';
-    } else {
-      const val = count ?? 0;
-      console.log('Live count fetched:', val);
-      if (el) el.textContent = val;
-      else console.warn('liveCountNum element not found');
+function fetchLiveCount() {
+  const el = document.getElementById('liveCountNum');
+  if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_PROJECT_URL_HERE') return;
+  const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const url = SUPABASE_URL + '/rest/v1/presence?select=*&last_seen=gte.' + encodeURIComponent(cutoff);
+  fetch(url, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Prefer': 'count=exact',
+      'Accept': 'application/json'
     }
-  } catch (e) {
-    console.warn('Presence fetch exception:', e.message);
-    const el = document.getElementById('liveCountNum');
-    if (el) el.textContent = '—';
-  }
+  })
+  .then(function(res) {
+    /* Supabase returns count in Content-Range header: 0-9/42 */
+    const range = res.headers.get('content-range');
+    if (range) {
+      const total = parseInt(range.split('/')[1]);
+      if (!isNaN(total) && el) el.textContent = total;
+    }
+    return res.json();
+  })
+  .then(function(data) {
+    /* fallback: count array length if header parsing failed */
+    if (el && (el.textContent === '0' || el.textContent === '—') && Array.isArray(data)) {
+      el.textContent = data.length;
+    }
+  })
+  .catch(function(e) {
+    console.warn('fetchLiveCount error:', e.message);
+  });
 }
 
 function startPresence() {
