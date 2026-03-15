@@ -82,17 +82,27 @@ async function saveAllStats() {
 }
 
 /* ─── PRESENCE / LIVE COUNT ──────────────────────────── */
+/* generates a unique ID per browser session — works for guests too */
+function getSessionId() {
+  let id = sessionStorage.getItem('vp_session_id');
+  if (!id) {
+    id = 'sess_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem('vp_session_id', id);
+  }
+  return id;
+}
+
 async function updatePresence() {
-  if (!db || !currentUser) return;
+  if (!db) return;
   await db.from('presence').upsert(
-    { user_id: currentUser.id, last_seen: new Date().toISOString() },
-    { onConflict: 'user_id' }
+    { session_id: getSessionId(), last_seen: new Date().toISOString() },
+    { onConflict: 'session_id' }
   );
 }
 
 async function fetchLiveCount() {
   if (!db) return;
-  /* count users seen in last 2 minutes */
+  /* count sessions seen in last 2 minutes */
   const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   const { count } = await db
     .from('presence')
@@ -103,7 +113,7 @@ async function fetchLiveCount() {
 }
 
 function startPresence() {
-  if (!db || !currentUser) return;
+  if (!db) return;
   updatePresence();
   fetchLiveCount();
   presenceInterval = setInterval(() => {
@@ -316,31 +326,26 @@ function openProfileModal() {
 /* ─── AUTH STATE LISTENER ────────────────────────────── */
 function initAuth() {
   if (!db) {
-    /* no Supabase — show auth modal only if never dismissed */
     if (!localStorage.getItem('vp_guest_dismissed')) openAuthModal();
     return;
   }
+
+  /* start presence immediately for everyone — guests included */
+  startPresence();
 
   db.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
       currentUser = session.user;
       updateAuthUI();
       await loadUserData(currentUser.id);
-      startPresence();
     } else {
       currentUser = null;
       updateAuthUI();
-      stopPresence();
-      /* show modal on first visit only */
       if (!localStorage.getItem('vp_guest_dismissed')) {
         setTimeout(() => openAuthModal(), 800);
       }
     }
   });
-
-  /* poll live count every 30s even for guests */
-  setInterval(fetchLiveCount, 30000);
-  fetchLiveCount();
 }
 
 
