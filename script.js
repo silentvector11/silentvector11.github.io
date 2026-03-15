@@ -94,31 +94,42 @@ function getSessionId() {
 
 async function updatePresence() {
   if (!db) return;
-  await db.from('presence').upsert(
-    { session_id: getSessionId(), last_seen: new Date().toISOString() },
-    { onConflict: 'session_id' }
-  );
+  try {
+    await db.from('presence').upsert(
+      { session_id: getSessionId(), last_seen: new Date().toISOString() },
+      { onConflict: 'session_id' }
+    );
+  } catch (e) { /* silently ignore network errors */ }
 }
 
 async function fetchLiveCount() {
   if (!db) return;
-  /* count sessions seen in last 2 minutes */
-  const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-  const { count } = await db
-    .from('presence')
-    .select('*', { count: 'exact', head: true })
-    .gte('last_seen', cutoff);
-  const el = document.getElementById('liveCountNum');
-  if (el) el.textContent = count ?? '—';
+  try {
+    const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const { count, error } = await db
+      .from('presence')
+      .select('*', { count: 'exact', head: true })
+      .gte('last_seen', cutoff);
+    const el = document.getElementById('liveCountNum');
+    if (el) el.textContent = error ? '—' : (count ?? 0);
+  } catch (e) {
+    const el = document.getElementById('liveCountNum');
+    if (el) el.textContent = '—';
+  }
 }
 
 function startPresence() {
   if (!db) return;
-  updatePresence();
-  fetchLiveCount();
-  presenceInterval = setInterval(() => {
-    updatePresence();
-    fetchLiveCount();
+  /* stop any existing interval first */
+  stopPresence();
+  /* update presence then fetch count — slight delay to let db settle */
+  setTimeout(async () => {
+    await updatePresence();
+    await fetchLiveCount();
+  }, 500);
+  presenceInterval = setInterval(async () => {
+    await updatePresence();
+    await fetchLiveCount();
   }, 30000);
 }
 
@@ -257,26 +268,34 @@ document.getElementById('userAvatarBtn').addEventListener('click', (e) => {
   if (!currentUser) { openAuthModal(); return; }
   document.getElementById('userDropdown').classList.toggle('open');
 });
-document.addEventListener('click', () => {
-  document.getElementById('userDropdown').classList.remove('open');
+/* close dropdown when clicking outside — but not on dropdown items */
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('userMenuWrap');
+  if (!wrap.contains(e.target)) {
+    document.getElementById('userDropdown').classList.remove('open');
+  }
 });
 
 /* logout */
-document.getElementById('userLogoutBtn').addEventListener('click', async () => {
+document.getElementById('userLogoutBtn').addEventListener('click', async (e) => {
+  e.stopPropagation();
   if (!db) return;
+  document.getElementById('userDropdown').classList.remove('open');
   await db.auth.signOut();
   currentUser = null;
-  stopPresence();
-  /* clear data and reload as guest */
+  /* clear account data */
   favorites = []; playCounts = {}; ratings = {}; bestTimes = {}; recentPlayed = [];
   updateAuthUI();
   renderAll();
-  document.getElementById('userDropdown').classList.remove('open');
   showToast('Signed out');
+  /* restart presence as guest after sign out */
+  stopPresence();
+  startPresence();
 });
 
 /* profile button */
-document.getElementById('userProfileBtn').addEventListener('click', () => {
+document.getElementById('userProfileBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
   document.getElementById('userDropdown').classList.remove('open');
   openProfileModal();
 });
