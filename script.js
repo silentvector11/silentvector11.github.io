@@ -111,8 +111,14 @@ async function fetchLiveCount() {
       .select('*', { count: 'exact', head: true })
       .gte('last_seen', cutoff);
     const el = document.getElementById('liveCountNum');
-    if (el) el.textContent = error ? '—' : (count ?? 0);
+    if (error) {
+      console.warn('Presence fetch error:', error.message);
+      if (el) el.textContent = '—';
+    } else {
+      if (el) el.textContent = count ?? 0;
+    }
   } catch (e) {
+    console.warn('Presence fetch exception:', e.message);
     const el = document.getElementById('liveCountNum');
     if (el) el.textContent = '—';
   }
@@ -279,16 +285,24 @@ document.addEventListener('click', (e) => {
 /* logout */
 document.getElementById('userLogoutBtn').addEventListener('click', async (e) => {
   e.stopPropagation();
-  if (!db) return;
   document.getElementById('userDropdown').classList.remove('open');
-  await db.auth.signOut();
+
+  /* clear Supabase auth tokens from localStorage immediately */
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('sb-') || key.includes('supabase')) localStorage.removeItem(key);
+  });
+
+  /* also try the proper signOut but don't wait for it */
+  if (db) db.auth.signOut().catch(() => {});
+
+  /* reset state */
   currentUser = null;
-  /* clear account data */
   favorites = []; playCounts = {}; ratings = {}; bestTimes = {}; recentPlayed = [];
   updateAuthUI();
   renderAll();
   showToast('Signed out');
-  /* restart presence as guest after sign out */
+
+  /* restart presence as guest */
   stopPresence();
   startPresence();
 });
