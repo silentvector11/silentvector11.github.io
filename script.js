@@ -115,7 +115,10 @@ async function fetchLiveCount() {
       console.warn('Presence fetch error:', error.message);
       if (el) el.textContent = '—';
     } else {
-      if (el) el.textContent = count ?? 0;
+      const val = count ?? 0;
+      console.log('Live count fetched:', val);
+      if (el) el.textContent = val;
+      else console.warn('liveCountNum element not found');
     }
   } catch (e) {
     console.warn('Presence fetch exception:', e.message);
@@ -126,13 +129,10 @@ async function fetchLiveCount() {
 
 function startPresence() {
   if (!db) return;
-  /* stop any existing interval first */
   stopPresence();
-  /* update presence then fetch count — slight delay to let db settle */
-  setTimeout(async () => {
-    await updatePresence();
-    await fetchLiveCount();
-  }, 500);
+  /* immediate fetch first */
+  updatePresence().then(() => fetchLiveCount());
+  /* then every 30 seconds */
   presenceInterval = setInterval(async () => {
     await updatePresence();
     await fetchLiveCount();
@@ -371,6 +371,9 @@ function initAuth() {
       currentUser = session.user;
       updateAuthUI();
       await loadUserData(currentUser.id);
+      /* re-fetch count after login since presence was already started */
+      await updatePresence();
+      await fetchLiveCount();
     } else {
       currentUser = null;
       updateAuthUI();
@@ -390,9 +393,9 @@ function initAuth() {
    thumb : path to thumbnail image
 ─────────────────────────────────────────────────────── */
 const GAMES = [
-  { name: "Slope",       cat: "action", url: "games/slope/index.html",       thumb: "thumbnails/slope.jpeg" },
-  { name: "Drive Mad",   cat: "racing", url: "games/drive-mad/index.html",   thumb: "thumbnails/drive-mad.jpg" },
-  { name: "Crossy Road", cat: "casual", url: "games/crossyroad/index.html", thumb: "thumbnails/crossyroad.jpg" },
+  { name: "Slope",       cat: "action", url: "games/slope/index.html",       thumb: "thumbnails/slope.png" },
+  { name: "Drive Mad",   cat: "racing", url: "games/drive-mad/index.html",   thumb: "thumbnails/drive-mad.png" },
+  { name: "Crossy Road", cat: "casual", url: "games/crossy-road/index.html", thumb: "thumbnails/crossy-road.png" },
 ];
 
 /* ─── STATE ─────────────────────────────────────────── */
