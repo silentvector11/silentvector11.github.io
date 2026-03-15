@@ -15,7 +15,7 @@
 
   <!-- ══ NAV ══════════════════════════════════════════════ -->
   <nav id="mainNav">
-    <div class="nav-logo" id="navLogo">Vault<span>Play</span></div>
+    <div class="nav-logo" id="navLogo">Vault</div>
     <div class="nav-search-wrap">
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input type="text" id="searchInput" placeholder="Search games…" autocomplete="off"/>
@@ -235,17 +235,6 @@
             <div class="setting-label"><div class="setting-name">Panic Redirect URL</div><div class="setting-hint">Where the panic button redirects to</div></div>
             <input class="setting-input" id="panicUrlInput" type="text" placeholder="https://google.com" maxlength="200" style="width:160px"/>
           </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">🎭 Identity</div>
-          <div class="setting-row">
-            <div class="setting-label"><div class="setting-name">Site Logo / Icon</div><div class="setting-hint">Emoji or text shown before the site name</div></div>
-            <div style="display:flex;gap:10px;align-items:center">
-              <input class="setting-input" id="logoEmojiInput" type="text" placeholder="🎮 or V" maxlength="4" style="width:80px;text-align:center;font-size:18px"/>
-              <div id="logoPreview" style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--accent)">Preview</div>
-            </div>
-          </div>
           <div class="setting-row">
             <div class="setting-label"><div class="setting-name">Incognito Mode</div><div class="setting-hint">Pauses play history and recently played tracking</div></div>
             <button class="setting-btn incognito-btn" id="incognitoToggle">🕵️ Incognito: OFF</button>
@@ -253,22 +242,9 @@
         </div>
 
         <div class="settings-section">
-          <div class="settings-section-title">🔤 Font Style</div>
-          <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px">
-            <div class="setting-hint">Choose a font style for the whole site</div>
-            <div class="font-btns">
-              <button class="font-btn active" data-font="default">Default</button>
-              <button class="font-btn" data-font="modern">Modern</button>
-              <button class="font-btn" data-font="mono">Mono</button>
-              <button class="font-btn" data-font="rounded">Rounded</button>
-              <button class="font-btn" data-font="elegant">Elegant</button>
-            </div>
-          </div>
-        </div>
-        <div class="settings-section">
           <div class="settings-section-title">🎨 Appearance</div>
           <div class="setting-row">
-            <div class="setting-label"><div class="setting-name">Accent Color</div><div class="setting-hint">Changes instantly as you pick</div></div>
+            <div class="setting-label"><div class="setting-name">Accent Color</div><div class="setting-hint">Changes live as you pick</div></div>
             <div class="color-swatches">
               <button class="swatch active" data-color="#7c5cfc" style="background:#7c5cfc"></button>
               <button class="swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
@@ -283,11 +259,24 @@
           <div class="setting-row">
             <div class="setting-label"><div class="setting-name">Background Style</div><div class="setting-hint">Visual style of the page background</div></div>
             <select class="setting-select" id="bgStyleSelect">
-              <option value="default">Default (Dark)</option>
+              <option value="default">Default</option>
               <option value="gradient">Gradient Mesh</option>
               <option value="animated">Animated Gradient</option>
               <option value="stars">Starfield</option>
               <option value="dots">Dot Grid</option>
+              <option value="mesh">Mesh Lines</option>
+              <option value="noise">Noise Texture</option>
+              <option value="aurora">Aurora</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="setting-name">Card Style</div><div class="setting-hint">Visual style of game cards</div></div>
+            <select class="setting-select" id="cardStyleSelect">
+              <option value="default">Default</option>
+              <option value="glass">Glassmorphism</option>
+              <option value="flat">Flat & Clean</option>
+              <option value="neon">Neon Glow</option>
+              <option value="minimal">Minimal</option>
             </select>
           </div>
           <div class="setting-row">
@@ -299,8 +288,48 @@
             </div>
           </div>
           <div class="setting-row">
+            <div class="setting-label"><div class="setting-name">Border Radius</div><div class="setting-hint">Roundness of cards and panels</div></div>
+            <div class="size-btns">
+              <button class="size-btn" data-radius="sharp">Sharp</button>
+              <button class="size-btn active" data-radius="default">Default</button>
+              <button class="size-btn" data-radius="pill">Pill</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="setting-name">Navbar Style</div><div class="setting-hint">Appearance of the top navigation bar</div></div>
+            <select class="setting-select" id="navStyleSelect">
+              <option value="default">Default (Blur)</option>
+              <option value="solid">Solid</option>
+              <option value="transparent">Transparent</option>
+              <option value="gradient">Gradient</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="setting-name">Animation Speed</div><div class="setting-hint">Speed of transitions</div></div>
+            <div class="size-btns">
+              <button class="size-btn" data-speed="slow">Slow</button>
+              <button class="size-btn active" data-speed="normal">Normal</button>
+              <button class="size-btn" data-speed="fast">Fast</button>
+              <button class="size-btn" data-speed="none">None</button>
+            </div>
+          </div>
+          <div class="setting-row">
             <div class="setting-label"><div class="setting-name">Theme</div><div class="setting-hint">Toggle dark / light mode</div></div>
             <button class="setting-btn" id="settingsThemeBtn">Toggle Theme</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">🔤 Font Style</div>
+          <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+            <div class="setting-hint">Choose a font style for the whole site</div>
+            <div class="font-btns">
+              <button class="font-btn active" data-font="default">Default</button>
+              <button class="font-btn" data-font="modern">Modern</button>
+              <button class="font-btn" data-font="mono">Mono</button>
+              <button class="font-btn" data-font="rounded">Rounded</button>
+              <button class="font-btn" data-font="elegant">Elegant</button>
+            </div>
           </div>
         </div>
         <div class="settings-section">
@@ -376,9 +405,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ══ CARD PREVIEW POPUP ════════════════════════════════ -->
-  <div class="card-preview-popup" id="cardPreviewPopup"></div>
 
   <!-- ══ INCOGNITO INDICATOR ══════════════════════════════ -->
   <div class="incognito-indicator" id="incognitoIndicator">🕵️ Incognito</div>

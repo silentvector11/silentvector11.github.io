@@ -26,10 +26,13 @@ let cardSize     = localStorage.getItem('vp_csize')   || 'medium';
 let accentColor  = localStorage.getItem('vp_accent')  || '#7c5cfc';
 let bgStyle      = localStorage.getItem('vp_bg')      || 'default';
 let tabTitle     = localStorage.getItem('vp_tabtitle')|| '';
-let panicUrl     = localStorage.getItem('vp_panicurl') || 'https://www.google.com';
+let panicUrl     = localStorage.getItem('vp_panicurl')  || 'https://www.google.com';
 let incognito    = localStorage.getItem('vp_incognito') === 'true';
-let siteFont     = localStorage.getItem('vp_font')     || 'default';
-let siteLogo     = localStorage.getItem('vp_logo')     || '';
+let siteFont     = localStorage.getItem('vp_font')      || 'default';
+let cardStyle    = localStorage.getItem('vp_cardstyle') || 'default';
+let borderRadius = localStorage.getItem('vp_radius')    || 'default';
+let navStyle     = localStorage.getItem('vp_navstyle')  || 'default';
+let animSpeed    = localStorage.getItem('vp_animspeed') || 'normal';
 
 /* ─── TIMER ─────────────────────────────────────────── */
 let timerInterval  = null;
@@ -66,7 +69,10 @@ function saveState() {
   localStorage.setItem('vp_panicurl',  panicUrl);
   localStorage.setItem('vp_incognito', incognito);
   localStorage.setItem('vp_font',      siteFont);
-  localStorage.setItem('vp_logo',      siteLogo);
+  localStorage.setItem('vp_cardstyle', cardStyle);
+  localStorage.setItem('vp_radius',    borderRadius);
+  localStorage.setItem('vp_navstyle',  navStyle);
+  localStorage.setItem('vp_animspeed', animSpeed);
 }
 
 /* ─── TOAST (with auto icon) ────────────────────────── */
@@ -326,12 +332,16 @@ let   starsAnimReq = null;
 function applyBg(style) {
   bgStyle = style;
   bgClasses.forEach(c => document.body.classList.remove(c));
+  document.body.classList.remove('bg-mesh','bg-noise','bg-aurora');
   const canvas = document.getElementById('bgCanvas');
   canvas.classList.remove('visible');
   if (starsAnimReq) { cancelAnimationFrame(starsAnimReq); starsAnimReq = null; }
   if      (style === 'gradient')  document.body.classList.add('bg-gradient');
   else if (style === 'animated')  document.body.classList.add('bg-animated');
   else if (style === 'dots')      document.body.classList.add('bg-dots');
+  else if (style === 'mesh')      document.body.classList.add('bg-mesh');
+  else if (style === 'noise')     document.body.classList.add('bg-noise');
+  else if (style === 'aurora')    document.body.classList.add('bg-aurora');
   else if (style === 'stars')   { canvas.classList.add('visible'); drawStars(canvas); }
   localStorage.setItem('vp_bg', style);
 }
@@ -473,11 +483,14 @@ document.getElementById('settingsBtn').addEventListener('click', () => {
   document.getElementById('tabTitleInput').value = tabTitle;
   document.getElementById('currentTabTitle').textContent = document.title;
   document.getElementById('panicUrlInput').value = panicUrl;
-  document.getElementById('logoEmojiInput').value = siteLogo;
   document.getElementById('bgStyleSelect').value = bgStyle;
+  document.getElementById('cardStyleSelect').value = cardStyle;
+  document.getElementById('navStyleSelect').value = navStyle;
   document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color === accentColor));
   document.getElementById('customColorPicker').value = accentColor;
   document.querySelectorAll('.size-btn[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === cardSize));
+  document.querySelectorAll('.size-btn[data-radius]').forEach(b => b.classList.toggle('active', b.dataset.radius === borderRadius));
+  document.querySelectorAll('.size-btn[data-speed]').forEach(b => b.classList.toggle('active', b.dataset.speed === animSpeed));
   document.querySelectorAll('.font-btn').forEach(b => b.classList.toggle('active', b.dataset.font === siteFont));
   document.getElementById('incognitoToggle').classList.toggle('active', incognito);
   document.getElementById('incognitoToggle').textContent = incognito ? '🕵️ Incognito: ON' : '🕵️ Incognito: OFF';
@@ -502,6 +515,18 @@ document.getElementById('resetTabTitleBtn').addEventListener('click', () => {
   applyTabTitle(); saveState(); showToast('Tab title reset to "Vault"');
 });
 
+/* card style */
+document.getElementById('cardStyleSelect').addEventListener('change', e => applyCardStyle(e.target.value));
+
+/* nav style */
+document.getElementById('navStyleSelect').addEventListener('change', e => applyNavStyle(e.target.value));
+
+/* border radius buttons */
+document.querySelectorAll('.size-btn[data-radius]').forEach(b => { b.addEventListener('click', () => applyBorderRadius(b.dataset.radius)); });
+
+/* animation speed buttons */
+document.querySelectorAll('.size-btn[data-speed]').forEach(b => { b.addEventListener('click', () => applyAnimSpeed(b.dataset.speed)); });
+
 /* incognito toggle */
 document.getElementById('incognitoToggle').addEventListener('click', () => {
   incognito = !incognito; applyIncognito();
@@ -510,20 +535,11 @@ document.getElementById('incognitoToggle').addEventListener('click', () => {
 /* font buttons */
 document.querySelectorAll('.font-btn').forEach(b => { b.addEventListener('click', () => applyFont(b.dataset.font)); });
 
-/* logo preview */
-document.getElementById('logoEmojiInput').addEventListener('input', e => {
-  siteLogo = e.target.value.trim();
-  applyLogo();
-  const preview = document.getElementById('logoPreview');
-  if (preview) preview.textContent = siteLogo ? `${siteLogo} VaultPlay` : 'VaultPlay';
-});
-
 /* save */
 document.getElementById('saveSettingsBtn').addEventListener('click', () => {
   tabTitle = document.getElementById('tabTitleInput').value.trim();
   panicUrl = document.getElementById('panicUrlInput').value.trim() || 'https://www.google.com';
-  siteLogo = document.getElementById('logoEmojiInput').value.trim();
-  applyTabTitle(); applyLogo(); saveState();
+  applyTabTitle(); saveState();
   showToast('✅ Settings saved!');
   document.getElementById('settingsModal').classList.remove('open');
 });
@@ -531,7 +547,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
 /* clear all data */
 document.getElementById('clearDataBtn').addEventListener('click', () => {
   if (!confirm('Wipe all favorites, history, ratings, stats and settings?')) return;
-  ['vp_favs','vp_recent','vp_plays','vp_ratings','vp_best','vp_shortcuts','vp_sort','vp_view','vp_csize','vp_accent','vp_bg','vp_tabtitle','vp_panicurl','vp_incognito','vp_font','vp_logo','vp_theme'].forEach(k => localStorage.removeItem(k));
+  ['vp_favs','vp_recent','vp_plays','vp_ratings','vp_best','vp_shortcuts','vp_sort','vp_view','vp_csize','vp_accent','vp_bg','vp_tabtitle','vp_panicurl','vp_incognito','vp_font','vp_cardstyle','vp_radius','vp_navstyle','vp_animspeed','vp_theme'].forEach(k => localStorage.removeItem(k));
   location.reload();
 });
 
@@ -569,14 +585,6 @@ function createCard(game, idx = 0) {
   div.querySelector('.fav-btn').addEventListener('click', e => toggleFav(game.name, e));
   div.querySelector('.split-btn').addEventListener('click', e => { e.stopPropagation(); openSplitScreen(game); });
   div.addEventListener('click', () => openGame(game));
-
-  /* hover preview — shows after 700ms hold */
-  div.addEventListener('mouseenter', () => {
-    hoverTimeout = setTimeout(() => showCardPreview(game, div.getBoundingClientRect()), 700);
-  });
-  div.addEventListener('mouseleave', () => hideCardPreview());
-  div.addEventListener('mousedown',  () => hideCardPreview());
-
   return div;
 }
 
@@ -815,67 +823,44 @@ function applyFont(font) {
   localStorage.setItem('vp_font', font);
 }
 
-/* ─── SITE LOGO / ICON ──────────────────────────────── */
-function applyLogo() {
-  const el = document.getElementById('navLogo');
-  if (!el) return;
-  if (siteLogo) {
-    el.innerHTML = `<span class="logo-custom-icon">${siteLogo}</span><span class="logo-text">Vault<span>Play</span></span>`;
-  } else {
-    el.innerHTML = `Vault<span>Play</span>`;
-  }
+/* ─── CARD STYLE ─────────────────────────────────────── */
+function applyCardStyle(style) {
+  cardStyle = style;
+  ['card-style-glass','card-style-flat','card-style-neon','card-style-minimal'].forEach(c => document.body.classList.remove(c));
+  if (style !== 'default') document.body.classList.add(`card-style-${style}`);
+  document.querySelectorAll('#cardStyleSelect option').forEach(o => {});
+  const sel = document.getElementById('cardStyleSelect');
+  if (sel) sel.value = style;
+  localStorage.setItem('vp_cardstyle', style);
 }
 
-/* ─── CARD HOVER PREVIEW ────────────────────────────── */
-let hoverTimeout = null;
-let previewEl    = null;
-
-function createPreviewEl() {
-  const el = document.createElement('div');
-  el.className = 'card-preview-popup';
-  el.id = 'cardPreviewPopup';
-  document.body.appendChild(el);
-  return el;
+/* ─── BORDER RADIUS ──────────────────────────────────── */
+function applyBorderRadius(r) {
+  borderRadius = r;
+  document.body.classList.remove('radius-sharp','radius-default','radius-pill');
+  document.body.classList.add(`radius-${r}`);
+  document.querySelectorAll('.size-btn[data-radius]').forEach(b => b.classList.toggle('active', b.dataset.radius === r));
+  localStorage.setItem('vp_radius', r);
 }
 
-function showCardPreview(game, cardRect) {
-  if (!previewEl) previewEl = createPreviewEl();
-  const rating = ratings[game.name] || 0;
-  const plays  = playCounts[game.name] || 0;
-  const best   = bestTimes[game.name];
-  previewEl.innerHTML = `
-    <div class="cpp-thumb">
-      ${game.thumb ? `<img src="${game.thumb}" alt="${game.name}">` : `<div class="cpp-thumb-placeholder">🎮</div>`}
-    </div>
-    <div class="cpp-body">
-      <div class="cpp-name">${game.name}</div>
-      <div class="cpp-cat">${game.cat}</div>
-      ${rating ? `<div class="cpp-rating">${'⭐'.repeat(rating)}</div>` : ''}
-      <div class="cpp-stats">
-        ${plays  ? `<span>▶ ${plays} plays</span>` : '<span>Never played</span>'}
-        ${best   ? `<span>⏱ Best: ${formatTime(best)}</span>` : ''}
-        ${isFav(game.name) ? `<span>❤️ Favorited</span>` : ''}
-      </div>
-      <div class="cpp-hint">Click to play</div>
-    </div>`;
-
-  /* position popup above or below card */
-  const popW = 220, popH = 180;
-  let left = cardRect.left + cardRect.width / 2 - popW / 2;
-  let top  = cardRect.top - popH - 12 + window.scrollY;
-  /* keep in viewport horizontally */
-  left = Math.max(8, Math.min(left, window.innerWidth - popW - 8));
-  /* if not enough space above, show below */
-  if (cardRect.top < popH + 20) top = cardRect.bottom + 12 + window.scrollY;
-
-  previewEl.style.left = left + 'px';
-  previewEl.style.top  = top  + 'px';
-  previewEl.classList.add('visible');
+/* ─── NAVBAR STYLE ───────────────────────────────────── */
+function applyNavStyle(style) {
+  navStyle = style;
+  const nav = document.getElementById('mainNav');
+  nav.classList.remove('nav-solid','nav-transparent','nav-gradient');
+  if (style !== 'default') nav.classList.add(`nav-${style}`);
+  const sel = document.getElementById('navStyleSelect');
+  if (sel) sel.value = style;
+  localStorage.setItem('vp_navstyle', style);
 }
 
-function hideCardPreview() {
-  clearTimeout(hoverTimeout);
-  if (previewEl) previewEl.classList.remove('visible');
+/* ─── ANIMATION SPEED ────────────────────────────────── */
+function applyAnimSpeed(speed) {
+  animSpeed = speed;
+  document.body.classList.remove('anim-slow','anim-fast','anim-none');
+  if (speed !== 'normal') document.body.classList.add(`anim-${speed}`);
+  document.querySelectorAll('.size-btn[data-speed]').forEach(b => b.classList.toggle('active', b.dataset.speed === speed));
+  localStorage.setItem('vp_animspeed', speed);
 }
 
 /* ─── SPLIT SCREEN ──────────────────────────────────── */
@@ -1121,9 +1106,12 @@ applyTheme();
 applyAccent(accentColor);
 applyBg(bgStyle);
 applyCardSize(cardSize);
+applyCardStyle(cardStyle);
+applyBorderRadius(borderRadius);
+applyNavStyle(navStyle);
+applyAnimSpeed(animSpeed);
 applyTabTitle();
 applyFont(siteFont);
-applyLogo();
 if (incognito) document.body.classList.add('incognito-mode');
 applyView();
 renderAll();

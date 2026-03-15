@@ -62,7 +62,6 @@ nav::after{content:'';position:absolute;bottom:-20px;left:0;right:0;height:20px;
 .light-mode nav::after{background:linear-gradient(to bottom,rgba(244,245,251,.3),transparent)}
 
 .nav-logo{font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.8px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;flex-shrink:0}
-.nav-logo span{font-weight:400;opacity:.55}
 
 .nav-search-wrap{flex:1;max-width:380px;position:relative}
 .nav-search-wrap>svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;transition:color var(--trans)}
@@ -390,6 +389,49 @@ body.card-large{--card-min:240px}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast-icon{font-size:16px}
 
+/* ─── BACKGROUND EXTRAS ──────────────────────────────── */
+body.bg-mesh::before{background-image:linear-gradient(rgba(124,92,252,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(124,92,252,.08) 1px,transparent 1px);background-size:40px 40px;opacity:1}
+body.bg-noise{background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n2)' opacity='0.08'/%3E%3C/svg%3E"),linear-gradient(135deg,#0b0c10,#111218)}
+body.bg-aurora{background:#060810;animation:auroraBg 12s ease infinite}
+@keyframes auroraBg{0%{filter:hue-rotate(0deg)}50%{filter:hue-rotate(40deg)}100%{filter:hue-rotate(0deg)}}
+body.bg-aurora::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 20% 50%,rgba(124,92,252,.2) 0%,transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(252,92,125,.15) 0%,transparent 50%),radial-gradient(ellipse at 60% 80%,rgba(6,182,212,.12) 0%,transparent 50%);animation:auroraMove 8s ease-in-out infinite alternate}
+@keyframes auroraMove{0%{transform:scale(1) translateY(0)}100%{transform:scale(1.1) translateY(-20px)}}
+
+/* ─── CARD STYLES ────────────────────────────────────── */
+/* glass */
+body.card-style-glass .game-card{background:rgba(255,255,255,.04);backdrop-filter:blur(12px);border-color:rgba(255,255,255,.1)}
+body.card-style-glass .game-card:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
+body.card-style-glass.light-mode .game-card{background:rgba(255,255,255,.7);backdrop-filter:blur(12px)}
+/* flat */
+body.card-style-flat .game-card{border:none;border-radius:8px;box-shadow:none}
+body.card-style-flat .game-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.3);border:none}
+/* neon */
+body.card-style-neon .game-card{border-color:rgba(124,92,252,.3)}
+body.card-style-neon .game-card:hover{box-shadow:0 0 20px var(--accent-glow),0 0 60px rgba(124,92,252,.15),0 20px 40px rgba(0,0,0,.4);border-color:var(--accent)}
+body.card-style-neon .card-name{text-shadow:0 0 20px var(--accent-glow)}
+/* minimal */
+body.card-style-minimal .game-card{background:transparent;border:1px solid var(--border)}
+body.card-style-minimal .game-card:hover{background:var(--surface);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+
+/* ─── BORDER RADIUS ──────────────────────────────────── */
+body.radius-sharp{--radius:4px}
+body.radius-default{--radius:16px}
+body.radius-pill{--radius:24px}
+body.radius-pill .cat-pill,.radius-pill #searchInput,.radius-pill .setting-input{border-radius:50px}
+body.radius-sharp .cat-pill,.radius-sharp #searchInput,.radius-sharp .setting-input,.radius-sharp .btn-random,.radius-sharp .btn-panic{border-radius:4px}
+
+/* ─── NAVBAR STYLES ──────────────────────────────────── */
+nav.nav-solid{background:var(--surface) !important;backdrop-filter:none}
+nav.nav-transparent{background:transparent !important;backdrop-filter:none;border-bottom-color:transparent}
+nav.nav-gradient{background:linear-gradient(135deg,rgba(124,92,252,.25),rgba(252,92,125,.1)) !important;backdrop-filter:blur(20px)}
+
+/* ─── ANIMATION SPEED ────────────────────────────────── */
+body.anim-slow{--trans:.5s cubic-bezier(.4,0,.2,1);--trans-slow:.8s cubic-bezier(.4,0,.2,1)}
+body.anim-fast{--trans:.1s cubic-bezier(.4,0,.2,1);--trans-slow:.2s cubic-bezier(.4,0,.2,1)}
+body.anim-none{--trans:0s;--trans-slow:0s}
+body.anim-none .game-card{animation:none}
+body.anim-none .page-section{transition:none}
+
 /* ─── INCOGNITO MODE ─────────────────────────────────── */
 .incognito-indicator{position:fixed;top:calc(var(--nav-h) + var(--bar-h) + 10px);right:16px;z-index:300;background:rgba(15,15,15,.9);border:1px solid rgba(255,255,255,.15);border-radius:50px;padding:5px 14px;font-size:12px;font-weight:600;color:rgba(255,255,255,.7);backdrop-filter:blur(8px);opacity:0;transform:translateY(-8px);pointer-events:none;transition:opacity var(--trans),transform var(--trans)}
 .incognito-indicator.visible{opacity:1;transform:translateY(0)}
@@ -402,29 +444,10 @@ body.incognito-mode .recent-chips,.incognito-mode #recentSection{opacity:.4;poin
 .font-btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
 .font-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 
-/* ─── SITE LOGO ──────────────────────────────────────── */
-.logo-custom-icon{font-size:20px;margin-right:6px;-webkit-text-fill-color:initial}
-.logo-text{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.logo-text span{font-weight:400;opacity:.55}
-
 /* ─── CARD SPLIT BUTTON ──────────────────────────────── */
 .split-btn{position:absolute;bottom:8px;right:8px;width:26px;height:26px;border-radius:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;font-size:13px;color:rgba(255,255,255,.7);opacity:0;transition:opacity var(--trans),background var(--trans),transform var(--trans);z-index:2}
 .game-card:hover .split-btn{opacity:1}
 .split-btn:hover{background:var(--accent);color:#fff;transform:scale(1.1)}
-
-/* ─── CARD HOVER PREVIEW ─────────────────────────────── */
-.card-preview-popup{position:absolute;z-index:800;width:220px;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);opacity:0;transform:translateY(6px) scale(.95);pointer-events:none;transition:opacity .18s ease,transform .18s cubic-bezier(.34,1.56,.64,1)}
-.card-preview-popup.visible{opacity:1;transform:translateY(0) scale(1)}
-.cpp-thumb{width:100%;aspect-ratio:16/9;background:var(--surface2);overflow:hidden}
-.cpp-thumb img{width:100%;height:100%;object-fit:cover}
-.cpp-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px}
-.cpp-body{padding:12px 14px}
-.cpp-name{font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:3px}
-.cpp-cat{font-size:11px;color:var(--muted);text-transform:capitalize;margin-bottom:6px}
-.cpp-rating{font-size:13px;margin-bottom:6px}
-.cpp-stats{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
-.cpp-stats span{font-size:11px;color:var(--muted)}
-.cpp-hint{font-size:11px;color:var(--accent);font-weight:600;font-family:var(--font-head)}
 
 /* ─── SPLIT SCREEN ───────────────────────────────────── */
 #splitScreen{display:none;position:fixed;inset:0;z-index:250;background:#000;flex-direction:column}
