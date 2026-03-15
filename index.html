@@ -50,6 +50,26 @@
       <button class="btn-icon" id="themeBtn" title="Toggle theme">
         <svg id="themeIcon" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
+      <!-- Live user count -->
+      <div class="live-count" id="liveCount" title="People online now">
+        <span class="live-dot"></span>
+        <span id="liveCountNum">—</span>
+      </div>
+      <!-- User avatar / login button -->
+      <div class="user-menu-wrap" id="userMenuWrap">
+        <button class="user-avatar-btn" id="userAvatarBtn" title="Account">
+          <span id="userAvatarInitials">?</span>
+        </button>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-dropdown-info">
+            <div class="user-dropdown-name" id="userDropdownName">Guest</div>
+            <div class="user-dropdown-email" id="userDropdownEmail">Not signed in</div>
+          </div>
+          <div class="user-dropdown-divider"></div>
+          <button class="user-dropdown-item" id="userProfileBtn">👤 Profile</button>
+          <button class="user-dropdown-item danger" id="userLogoutBtn">🚪 Sign Out</button>
+        </div>
+      </div>
     </div>
   </nav>
 
@@ -145,10 +165,6 @@
       <!-- Live session clock in player bar -->
       <div class="player-session-clock" id="playerSessionClock">00:00</div>
       <div class="player-actions">
-        <button class="player-btn" id="muteBtn" title="Mute/Unmute game">
-          <svg id="muteIcon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-          <span id="muteBtnLabel">Mute</span>
-        </button>
         <button class="player-btn" id="favInPlayer">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           Favorite
@@ -384,18 +400,12 @@
       <div class="split-game-info">
         <div class="split-thumb" id="splitThumb1"></div>
         <span class="split-title" id="splitTitle1">Game 1</span>
-        <button class="split-mute-btn" id="splitMute1" title="Mute Game 1">
-          <svg class="split-mute-icon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-        </button>
       </div>
       <div class="split-center-controls">
         <span class="split-label">⊞ Split Screen</span>
         <button class="split-swap" id="splitSwapBtn" title="Swap games">⇄</button>
       </div>
       <div class="split-game-info" style="justify-content:flex-end">
-        <button class="split-mute-btn" id="splitMute2" title="Mute Game 2">
-          <svg class="split-mute-icon" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-        </button>
         <span class="split-title" id="splitTitle2">Pick a game →</span>
         <div class="split-thumb" id="splitThumb2"></div>
       </div>
@@ -418,6 +428,59 @@
 
   <!-- ══ INCOGNITO INDICATOR ══════════════════════════════ -->
   <div class="incognito-indicator" id="incognitoIndicator">🕵️ Incognito</div>
+
+  <!-- ══ AUTH MODAL ══════════════════════════════════════ -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal auth-modal">
+      <div class="auth-header">
+        <div class="auth-logo">Vault</div>
+        <div class="auth-tagline">Sign in to sync your progress across devices</div>
+      </div>
+      <!-- Tab switcher -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="authTabSignin">Sign In</button>
+        <button class="auth-tab" id="authTabSignup">Create Account</button>
+      </div>
+      <div class="auth-body">
+        <!-- Error message -->
+        <div class="auth-error" id="authError"></div>
+        <!-- Username (signup only) -->
+        <div class="auth-field" id="authUsernameField" style="display:none">
+          <label>Username</label>
+          <input type="text" id="authUsername" placeholder="your_username" autocomplete="username" maxlength="20"/>
+          <div class="auth-field-hint">Letters, numbers and underscores only</div>
+        </div>
+        <!-- Email -->
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email"/>
+        </div>
+        <!-- Password -->
+        <div class="auth-field">
+          <label>Password</label>
+          <div class="auth-password-wrap">
+            <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password"/>
+            <button class="auth-password-toggle" id="authPasswordToggle" tabindex="-1">👁</button>
+          </div>
+        </div>
+        <!-- Submit -->
+        <button class="auth-submit" id="authSubmit">Sign In</button>
+        <!-- Guest option -->
+        <button class="auth-guest" id="authGuestBtn">Continue as Guest →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PROFILE MODAL ════════════════════════════════════ -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">👤 Your Profile</div>
+        <button class="modal-close" id="profileModalClose">✕</button>
+      </div>
+      <div class="modal-body" id="profileModalBody"></div>
+    </div>
+  </div>
 
   <!-- ══ TOAST ════════════════════════════════════════════ -->
   <div class="toast" id="toast"><span class="toast-icon" id="toastIcon"></span><span id="toastMsg"></span></div>

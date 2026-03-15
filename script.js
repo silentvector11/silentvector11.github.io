@@ -1,18 +1,356 @@
 /* ───────────────────────────────────────────────────────
+   ⚠️  SUPABASE CONFIG — FILL IN YOUR KEYS BELOW
+   Get these from: Supabase Dashboard → Settings → API
+─────────────────────────────────────────────────────── */
+const SUPABASE_URL = 'https://hbugjcxrlcxdwwqgdftg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidWdqY3hybGN4ZHd3cWdkZnRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NjE1MDksImV4cCI6MjA4OTEzNzUwOX0.QReHOH1B_T0LyUW5Rrx-IospN6svWq29S4Xxh4hZXk0';
+const db = (SUPABASE_URL !== 'YOUR_PROJECT_URL_HERE' && SUPABASE_KEY !== 'YOUR_ANON_KEY_HERE')
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
+/* ─── AUTH STATE ─────────────────────────────────────── */
+let currentUser     = null;   /* logged-in Supabase user */
+let presenceChannel = null;
+let presenceInterval= null;
+
+/* ─── CLOUD SYNC ─────────────────────────────────────── */
+async function loadUserData(userId) {
+  if (!db) return;
+  const { data, error } = await db
+    .from('game_stats')
+    .select('*')
+    .eq('user_id', userId);
+  if (error || !data) return;
+
+  /* discard local, replace with DB data */
+  favorites    = [];
+  playCounts   = {};
+  ratings      = {};
+  bestTimes    = {};
+  recentPlayed = [];
+
+  data.forEach(row => {
+    if (row.favorited)           favorites.push(row.game_name);
+    if (row.play_count > 0)      playCounts[row.game_name]  = row.play_count;
+    if (row.rating > 0)          ratings[row.game_name]     = row.rating;
+    if (row.best_time > 0)       bestTimes[row.game_name]   = row.best_time;
+  });
+
+  /* rebuild recent from play counts sorted by last played */
+  recentPlayed = Object.entries(playCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([name]) => name);
+
+  renderAll();
+}
+
+async function saveGameStat(gameName) {
+  if (!db || !currentUser) { saveState(); return; }
+  const row = {
+    user_id:    currentUser.id,
+    game_name:  gameName,
+    play_count: playCounts[gameName] || 0,
+    best_time:  bestTimes[gameName]  || 0,
+    rating:     ratings[gameName]    || 0,
+    favorited:  favorites.includes(gameName),
+    updated_at: new Date().toISOString(),
+  };
+  await db.from('game_stats').upsert(row, { onConflict: 'user_id,game_name' });
+}
+
+async function saveAllStats() {
+  if (!db || !currentUser) { saveState(); return; }
+  const allGames = new Set([
+    ...Object.keys(playCounts),
+    ...Object.keys(ratings),
+    ...Object.keys(bestTimes),
+    ...favorites,
+  ]);
+  const rows = [...allGames].map(name => ({
+    user_id:    currentUser.id,
+    game_name:  name,
+    play_count: playCounts[name] || 0,
+    best_time:  bestTimes[name]  || 0,
+    rating:     ratings[name]    || 0,
+    favorited:  favorites.includes(name),
+    updated_at: new Date().toISOString(),
+  }));
+  if (rows.length > 0) {
+    await db.from('game_stats').upsert(rows, { onConflict: 'user_id,game_name' });
+  }
+}
+
+/* ─── PRESENCE / LIVE COUNT ──────────────────────────── */
+async function updatePresence() {
+  if (!db || !currentUser) return;
+  await db.from('presence').upsert(
+    { user_id: currentUser.id, last_seen: new Date().toISOString() },
+    { onConflict: 'user_id' }
+  );
+}
+
+async function fetchLiveCount() {
+  if (!db) return;
+  /* count users seen in last 2 minutes */
+  const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const { count } = await db
+    .from('presence')
+    .select('*', { count: 'exact', head: true })
+    .gte('last_seen', cutoff);
+  const el = document.getElementById('liveCountNum');
+  if (el) el.textContent = count ?? '—';
+}
+
+function startPresence() {
+  if (!db || !currentUser) return;
+  updatePresence();
+  fetchLiveCount();
+  presenceInterval = setInterval(() => {
+    updatePresence();
+    fetchLiveCount();
+  }, 30000);
+}
+
+function stopPresence() {
+  if (presenceInterval) { clearInterval(presenceInterval); presenceInterval = null; }
+}
+
+/* ─── AUTH UI ────────────────────────────────────────── */
+function updateAuthUI() {
+  const avatarBtn  = document.getElementById('userAvatarBtn');
+  const initials   = document.getElementById('userAvatarInitials');
+  const dropName   = document.getElementById('userDropdownName');
+  const dropEmail  = document.getElementById('userDropdownEmail');
+
+  if (currentUser) {
+    const username = currentUser.user_metadata?.username || currentUser.email?.split('@')[0] || 'User';
+    const ini = username.slice(0, 2).toUpperCase();
+    avatarBtn.classList.remove('guest');
+    initials.textContent  = ini;
+    dropName.textContent  = username;
+    dropEmail.textContent = currentUser.email;
+  } else {
+    avatarBtn.classList.add('guest');
+    initials.textContent  = '?';
+    dropName.textContent  = 'Guest';
+    dropEmail.textContent = 'Not signed in';
+  }
+}
+
+/* ─── AUTH MODAL ─────────────────────────────────────── */
+let authMode = 'signin'; /* 'signin' | 'signup' */
+
+function openAuthModal() {
+  document.getElementById('authModal').classList.add('open');
+  document.getElementById('authEmail').focus();
+}
+function closeAuthModal() {
+  document.getElementById('authModal').classList.remove('open');
+  clearAuthError();
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const isSignup = mode === 'signup';
+  document.getElementById('authTabSignin').classList.toggle('active', !isSignup);
+  document.getElementById('authTabSignup').classList.toggle('active', isSignup);
+  document.getElementById('authUsernameField').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('authSubmit').textContent = isSignup ? 'Create Account' : 'Sign In';
+  document.getElementById('authPassword').autocomplete = isSignup ? 'new-password' : 'current-password';
+  clearAuthError();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+function clearAuthError() {
+  const el = document.getElementById('authError');
+  el.classList.remove('visible');
+  el.textContent = '';
+}
+
+function setAuthLoading(loading) {
+  const btn = document.getElementById('authSubmit');
+  btn.disabled   = loading;
+  btn.textContent = loading
+    ? (authMode === 'signup' ? 'Creating account…' : 'Signing in…')
+    : (authMode === 'signup' ? 'Create Account' : 'Sign In');
+}
+
+/* tab switchers */
+document.getElementById('authTabSignin').addEventListener('click', () => setAuthMode('signin'));
+document.getElementById('authTabSignup').addEventListener('click', () => setAuthMode('signup'));
+
+/* password visibility toggle */
+document.getElementById('authPasswordToggle').addEventListener('click', () => {
+  const input = document.getElementById('authPassword');
+  input.type = input.type === 'password' ? 'text' : 'password';
+});
+
+/* guest button */
+document.getElementById('authGuestBtn').addEventListener('click', () => {
+  closeAuthModal();
+  localStorage.setItem('vp_guest_dismissed', 'true');
+  showToast('Playing as guest — data saves locally only');
+});
+
+/* submit */
+document.getElementById('authSubmit').addEventListener('click', async () => {
+  if (!db) { showAuthError('Supabase not configured.'); return; }
+  const email    = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const username = document.getElementById('authUsername').value.trim();
+
+  if (!email || !password) { showAuthError('Please fill in all fields.'); return; }
+  if (authMode === 'signup' && !username) { showAuthError('Please enter a username.'); return; }
+  if (authMode === 'signup' && !/^[a-zA-Z0-9_]+$/.test(username)) {
+    showAuthError('Username can only contain letters, numbers and underscores.'); return;
+  }
+
+  setAuthLoading(true);
+  clearAuthError();
+
+  if (authMode === 'signup') {
+    const { data, error } = await db.auth.signUp({
+      email, password,
+      options: { data: { username } }
+    });
+    if (error) { showAuthError(error.message); setAuthLoading(false); return; }
+    /* insert profile row */
+    if (data.user) {
+      await db.from('profiles').upsert({ id: data.user.id, username });
+    }
+    showToast('✅ Account created! Welcome to Vault');
+    closeAuthModal();
+  } else {
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    if (error) { showAuthError(error.message); setAuthLoading(false); return; }
+    showToast('✅ Signed in!');
+    closeAuthModal();
+  }
+  setAuthLoading(false);
+});
+
+/* allow Enter key to submit */
+['authEmail','authPassword','authUsername'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('authSubmit').click();
+  });
+});
+
+/* user avatar button — toggle dropdown */
+document.getElementById('userAvatarBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!currentUser) { openAuthModal(); return; }
+  document.getElementById('userDropdown').classList.toggle('open');
+});
+document.addEventListener('click', () => {
+  document.getElementById('userDropdown').classList.remove('open');
+});
+
+/* logout */
+document.getElementById('userLogoutBtn').addEventListener('click', async () => {
+  if (!db) return;
+  await db.auth.signOut();
+  currentUser = null;
+  stopPresence();
+  /* clear data and reload as guest */
+  favorites = []; playCounts = {}; ratings = {}; bestTimes = {}; recentPlayed = [];
+  updateAuthUI();
+  renderAll();
+  document.getElementById('userDropdown').classList.remove('open');
+  showToast('Signed out');
+});
+
+/* profile button */
+document.getElementById('userProfileBtn').addEventListener('click', () => {
+  document.getElementById('userDropdown').classList.remove('open');
+  openProfileModal();
+});
+
+/* close profile modal */
+document.getElementById('profileModalClose').addEventListener('click', () => {
+  document.getElementById('profileModal').classList.remove('open');
+});
+document.getElementById('profileModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('profileModal'))
+    document.getElementById('profileModal').classList.remove('open');
+});
+
+function openProfileModal() {
+  if (!currentUser) return;
+  const username   = currentUser.user_metadata?.username || currentUser.email?.split('@')[0] || 'User';
+  const joined     = new Date(currentUser.created_at).toLocaleDateString('en-AU', { year:'numeric', month:'long', day:'numeric' });
+  const totalPlays = Object.values(playCounts).reduce((a,b) => a+b, 0);
+  const avgRating  = Object.values(ratings).length
+    ? (Object.values(ratings).reduce((a,b)=>a+b,0) / Object.values(ratings).length).toFixed(1)
+    : '—';
+  const topCatMap  = {};
+  Object.entries(playCounts).forEach(([name, cnt]) => {
+    const g = GAMES.find(x => x.name === name);
+    if (g) topCatMap[g.cat] = (topCatMap[g.cat] || 0) + cnt;
+  });
+  const topCat = Object.entries(topCatMap).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+
+  document.getElementById('profileModalBody').innerHTML = `
+    <div class="profile-card">
+      <div class="profile-avatar">${username.slice(0,2).toUpperCase()}</div>
+      <div class="profile-info">
+        <div class="profile-username">${username}</div>
+        <div class="profile-email">${currentUser.email}</div>
+        <div class="profile-joined">Joined ${joined}</div>
+      </div>
+    </div>
+    <div class="profile-stats-grid">
+      <div class="profile-stat"><div class="profile-stat-val">${totalPlays}</div><div class="profile-stat-label">Total Sessions</div></div>
+      <div class="profile-stat"><div class="profile-stat-val">${favorites.length}</div><div class="profile-stat-label">Favorites</div></div>
+      <div class="profile-stat"><div class="profile-stat-val">${avgRating}⭐</div><div class="profile-stat-label">Avg Rating</div></div>
+    </div>
+    <div style="font-size:13px;color:var(--muted);text-align:center">Favourite category: <strong style="color:var(--text)">${topCat}</strong></div>`;
+  document.getElementById('profileModal').classList.add('open');
+}
+
+/* ─── AUTH STATE LISTENER ────────────────────────────── */
+function initAuth() {
+  if (!db) {
+    /* no Supabase — show auth modal only if never dismissed */
+    if (!localStorage.getItem('vp_guest_dismissed')) openAuthModal();
+    return;
+  }
+
+  db.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
+      currentUser = session.user;
+      updateAuthUI();
+      await loadUserData(currentUser.id);
+      startPresence();
+    } else {
+      currentUser = null;
+      updateAuthUI();
+      stopPresence();
+      /* show modal on first visit only */
+      if (!localStorage.getItem('vp_guest_dismissed')) {
+        setTimeout(() => openAuthModal(), 800);
+      }
+    }
+  });
+
+  /* poll live count every 30s even for guests */
+  setInterval(fetchLiveCount, 30000);
+  fetchLiveCount();
+}
+
+
+/* ───────────────────────────────────────────────────────
    GAMES ARRAY
    name  : display name
    cat   : action | puzzle | io | sports | racing | adventure | casual | other
    url   : path to game folder index.html
    thumb : path to thumbnail image
 ─────────────────────────────────────────────────────── */
-const SUPABASE_URL  = 'https://hbugjcxrlcxdwwqgdftg.supabase.co';
-const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidWdqY3hybGN4ZHd3cWdkZnRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NjE1MDksImV4cCI6MjA4OTEzNzUwOX0.QReHOH1B_T0LyUW5Rrx-IospN6svWq29S4Xxh4hZXk0';
-const db      = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-db.auth.getSession().then(({ data }) => {
-  console.log('Supabase connected. Session:', data.session);
-});
-
 const GAMES = [
   { name: "Slope",       cat: "action", url: "games/slope/index.html",       thumb: "thumbnails/slope.jpeg" },
   { name: "Drive Mad",   cat: "racing", url: "games/drive-mad/index.html",   thumb: "thumbnails/drive-mad.jpg" },
@@ -81,6 +419,8 @@ function saveState() {
   localStorage.setItem('vp_radius',    borderRadius);
   localStorage.setItem('vp_navstyle',  navStyle);
   localStorage.setItem('vp_animspeed', animSpeed);
+  /* sync to Supabase if logged in */
+  if (currentUser) saveAllStats();
 }
 
 /* ─── TOAST (with auto icon) ────────────────────────── */
@@ -1059,89 +1399,6 @@ document.addEventListener('keydown', e => {
   if (matches(sc.toggleView)) { compactView = !compactView; applyView(); showToast(compactView ? 'Compact view' : 'Grid view'); return; }
 });
 
-/* ─── MUTE ───────────────────────────────────────────── */
-let gameMuted = false;
-
-const MUTE_ICON_ON  = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>`;
-const MUTE_ICON_OFF = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>`;
-
-function setFrameMuted(frameEl, muted) {
-  /* iframe.muted is the standard browser attribute — works on chromium browsers */
-  frameEl.muted = muted;
-  /* also set the attribute for browsers that need it */
-  if (muted) frameEl.setAttribute('muted', '');
-  else frameEl.removeAttribute('muted');
-  /* reload src to apply muted state — browsers require this */
-  const src = frameEl.src;
-  if (src) {
-    frameEl.src = '';
-    setTimeout(() => { frameEl.src = src; }, 50);
-  }
-}
-
-function applyMuteUI() {
-  const btn   = document.getElementById('muteBtn');
-  const icon  = document.getElementById('muteIcon');
-  const label = document.getElementById('muteBtnLabel');
-  const wrap  = document.querySelector('.player-frame-wrap');
-  if (!btn) return;
-  btn.classList.toggle('muted', gameMuted);
-  icon.innerHTML = gameMuted ? MUTE_ICON_OFF : MUTE_ICON_ON;
-  label.textContent = gameMuted ? 'Unmute' : 'Mute';
-  wrap.classList.toggle('muted-frame', gameMuted);
-}
-
-document.getElementById('muteBtn').addEventListener('click', () => {
-  gameMuted = !gameMuted;
-  const frame = document.getElementById('gameFrame');
-  setFrameMuted(frame, gameMuted);
-  applyMuteUI();
-  showToast(gameMuted ? '🔇 Game muted' : '🔊 Game unmuted');
-});
-
-/* reset mute when closing game */
-const _origCloseGame = closeGame;
-closeGame = function() {
-  gameMuted = false;
-  applyMuteUI();
-  _origCloseGame();
-};
-
-/* ─── SPLIT MUTE ─────────────────────────────────────── */
-let splitMuted1 = false;
-let splitMuted2 = false;
-
-function applySplitMuteUI(which) {
-  const muted = which === 1 ? splitMuted1 : splitMuted2;
-  const btn   = document.getElementById(`splitMute${which}`);
-  const pane  = document.getElementById(`splitFrame${which}`).parentElement;
-  const icon  = btn.querySelector('.split-mute-icon');
-  btn.classList.toggle('muted', muted);
-  pane.classList.toggle('muted-pane', muted);
-  icon.innerHTML = muted ? MUTE_ICON_OFF : MUTE_ICON_ON;
-}
-
-document.getElementById('splitMute1').addEventListener('click', () => {
-  splitMuted1 = !splitMuted1;
-  setFrameMuted(document.getElementById('splitFrame1'), splitMuted1);
-  applySplitMuteUI(1);
-  showToast(splitMuted1 ? '🔇 Game 1 muted' : '🔊 Game 1 unmuted');
-});
-
-document.getElementById('splitMute2').addEventListener('click', () => {
-  splitMuted2 = !splitMuted2;
-  setFrameMuted(document.getElementById('splitFrame2'), splitMuted2);
-  applySplitMuteUI(2);
-  showToast(splitMuted2 ? '🔇 Game 2 muted' : '🔊 Game 2 unmuted');
-});
-
-/* reset split mutes when closing */
-const _origCloseSplit = closeSplitScreen;
-closeSplitScreen = function() {
-  splitMuted1 = false; splitMuted2 = false;
-  applySplitMuteUI(1); applySplitMuteUI(2);
-  _origCloseSplit();
-};
 document.getElementById('splitCloseBtn').addEventListener('click', closeSplitScreen);
 document.getElementById('splitSwapBtn').addEventListener('click', () => {
   if (!splitGame1 || !splitGame2) return;
@@ -1192,3 +1449,5 @@ applyView();
 renderAll();
 requestAnimationFrame(() => animateSections());
 setTimeout(() => scrollActivePill(), 100);
+/* initialise Supabase auth */
+initAuth();
