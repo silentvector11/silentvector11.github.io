@@ -26,6 +26,10 @@ let cardSize     = localStorage.getItem('vp_csize')   || 'medium';
 let accentColor  = localStorage.getItem('vp_accent')  || '#7c5cfc';
 let bgStyle      = localStorage.getItem('vp_bg')      || 'default';
 let tabTitle     = localStorage.getItem('vp_tabtitle')|| '';
+let panicUrl     = localStorage.getItem('vp_panicurl') || 'https://www.google.com';
+let incognito    = localStorage.getItem('vp_incognito') === 'true';
+let siteFont     = localStorage.getItem('vp_font')     || 'default';
+let siteLogo     = localStorage.getItem('vp_logo')     || '';
 
 /* ─── TIMER ─────────────────────────────────────────── */
 let timerInterval  = null;
@@ -59,6 +63,10 @@ function saveState() {
   localStorage.setItem('vp_accent',    accentColor);
   localStorage.setItem('vp_bg',        bgStyle);
   localStorage.setItem('vp_tabtitle',  tabTitle);
+  localStorage.setItem('vp_panicurl',  panicUrl);
+  localStorage.setItem('vp_incognito', incognito);
+  localStorage.setItem('vp_font',      siteFont);
+  localStorage.setItem('vp_logo',      siteLogo);
 }
 
 /* ─── TOAST (with auto icon) ────────────────────────── */
@@ -201,6 +209,7 @@ function toggleFav(name, e) {
 }
 
 function addRecent(game) {
+  if (incognito) return; /* skip history in incognito mode */
   recentPlayed = recentPlayed.filter(r => r !== game.name);
   recentPlayed.unshift(game.name);
   if (recentPlayed.length > 10) recentPlayed.pop();
@@ -463,10 +472,15 @@ document.getElementById('shortcutsModal').addEventListener('click', e => { if(e.
 document.getElementById('settingsBtn').addEventListener('click', () => {
   document.getElementById('tabTitleInput').value = tabTitle;
   document.getElementById('currentTabTitle').textContent = document.title;
+  document.getElementById('panicUrlInput').value = panicUrl;
+  document.getElementById('logoEmojiInput').value = siteLogo;
   document.getElementById('bgStyleSelect').value = bgStyle;
   document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color === accentColor));
   document.getElementById('customColorPicker').value = accentColor;
   document.querySelectorAll('.size-btn[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === cardSize));
+  document.querySelectorAll('.font-btn').forEach(b => b.classList.toggle('active', b.dataset.font === siteFont));
+  document.getElementById('incognitoToggle').classList.toggle('active', incognito);
+  document.getElementById('incognitoToggle').textContent = incognito ? '🕵️ Incognito: ON' : '🕵️ Incognito: OFF';
   document.getElementById('settingsModal').classList.add('open');
 });
 document.getElementById('settingsModalClose').addEventListener('click', () => document.getElementById('settingsModal').classList.remove('open'));
@@ -488,10 +502,28 @@ document.getElementById('resetTabTitleBtn').addEventListener('click', () => {
   applyTabTitle(); saveState(); showToast('Tab title reset to "Vault"');
 });
 
+/* incognito toggle */
+document.getElementById('incognitoToggle').addEventListener('click', () => {
+  incognito = !incognito; applyIncognito();
+});
+
+/* font buttons */
+document.querySelectorAll('.font-btn').forEach(b => { b.addEventListener('click', () => applyFont(b.dataset.font)); });
+
+/* logo preview */
+document.getElementById('logoEmojiInput').addEventListener('input', e => {
+  siteLogo = e.target.value.trim();
+  applyLogo();
+  const preview = document.getElementById('logoPreview');
+  if (preview) preview.textContent = siteLogo ? `${siteLogo} VaultPlay` : 'VaultPlay';
+});
+
 /* save */
 document.getElementById('saveSettingsBtn').addEventListener('click', () => {
   tabTitle = document.getElementById('tabTitleInput').value.trim();
-  applyTabTitle(); saveState();
+  panicUrl = document.getElementById('panicUrlInput').value.trim() || 'https://www.google.com';
+  siteLogo = document.getElementById('logoEmojiInput').value.trim();
+  applyTabTitle(); applyLogo(); saveState();
   showToast('✅ Settings saved!');
   document.getElementById('settingsModal').classList.remove('open');
 });
@@ -499,7 +531,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
 /* clear all data */
 document.getElementById('clearDataBtn').addEventListener('click', () => {
   if (!confirm('Wipe all favorites, history, ratings, stats and settings?')) return;
-  ['vp_favs','vp_recent','vp_plays','vp_ratings','vp_best','vp_shortcuts','vp_sort','vp_view','vp_csize','vp_accent','vp_bg','vp_tabtitle','vp_theme'].forEach(k => localStorage.removeItem(k));
+  ['vp_favs','vp_recent','vp_plays','vp_ratings','vp_best','vp_shortcuts','vp_sort','vp_view','vp_csize','vp_accent','vp_bg','vp_tabtitle','vp_panicurl','vp_incognito','vp_font','vp_logo','vp_theme'].forEach(k => localStorage.removeItem(k));
   location.reload();
 });
 
@@ -523,6 +555,7 @@ function createCard(game, idx = 0) {
       <button class="fav-btn ${fav?'active':''}" title="${fav?'Remove from favorites':'Add to favorites'}">
         <svg width="13" height="13" fill="${fav?'#fff':'none'}" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </button>
+      <button class="split-btn" title="Split screen">⊞</button>
     </div>
     <div class="card-body">
       <div class="card-name">${game.name}</div>
@@ -534,7 +567,16 @@ function createCard(game, idx = 0) {
     </div>`;
 
   div.querySelector('.fav-btn').addEventListener('click', e => toggleFav(game.name, e));
+  div.querySelector('.split-btn').addEventListener('click', e => { e.stopPropagation(); openSplitScreen(game); });
   div.addEventListener('click', () => openGame(game));
+
+  /* hover preview — shows after 700ms hold */
+  div.addEventListener('mouseenter', () => {
+    hoverTimeout = setTimeout(() => showCardPreview(game, div.getBoundingClientRect()), 700);
+  });
+  div.addEventListener('mouseleave', () => hideCardPreview());
+  div.addEventListener('mousedown',  () => hideCardPreview());
+
   return div;
 }
 
@@ -721,8 +763,173 @@ document.getElementById('favInPlayer').addEventListener('click', () => {
 });
 
 /* ─── PANIC ─────────────────────────────────────────── */
-function triggerPanic() { location.replace('https://www.google.com'); }
+function triggerPanic() { location.replace(panicUrl || 'https://www.google.com'); }
 document.getElementById('panicBtn').addEventListener('click', triggerPanic);
+
+/* ─── INCOGNITO MODE ────────────────────────────────── */
+function applyIncognito() {
+  document.body.classList.toggle('incognito-mode', incognito);
+  const btn = document.getElementById('incognitoToggle');
+  if (btn) {
+    btn.textContent = incognito ? '🕵️ Incognito: ON' : '🕵️ Incognito: OFF';
+    btn.classList.toggle('active', incognito);
+  }
+  updateIncognitoIndicator();
+  if (incognito) showToast('🕵️ Incognito ON — history paused');
+  else           showToast('Incognito OFF — history resuming');
+  localStorage.setItem('vp_incognito', incognito);
+}
+
+/* ─── FONT SWITCHER ─────────────────────────────────── */
+const FONTS = {
+  default:    { label: 'Default',   head: "'Syne', sans-serif",              body: "'DM Sans', sans-serif" },
+  modern:     { label: 'Modern',    head: "'Inter', sans-serif",              body: "'Inter', sans-serif" },
+  mono:       { label: 'Monospace', head: "'JetBrains Mono', monospace",      body: "'JetBrains Mono', monospace" },
+  rounded:    { label: 'Rounded',   head: "'Nunito', sans-serif",             body: "'Nunito', sans-serif" },
+  elegant:    { label: 'Elegant',   head: "'Playfair Display', serif",        body: "'Lato', sans-serif" },
+};
+
+const FONT_LINKS = {
+  modern:  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+  mono:    'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap',
+  rounded: 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap',
+  elegant: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Lato:wght@300;400;700&display=swap',
+};
+
+function applyFont(font) {
+  siteFont = font;
+  const f = FONTS[font] || FONTS.default;
+  /* load font if needed */
+  if (font !== 'default' && FONT_LINKS[font]) {
+    const existing = document.getElementById('fontLink');
+    const link = existing || document.createElement('link');
+    link.id   = 'fontLink';
+    link.rel  = 'stylesheet';
+    link.href = FONT_LINKS[font];
+    if (!existing) document.head.appendChild(link);
+  }
+  document.documentElement.style.setProperty('--font-head', f.head);
+  document.documentElement.style.setProperty('--font-body', f.body);
+  /* update active state in buttons */
+  document.querySelectorAll('.font-btn').forEach(b => b.classList.toggle('active', b.dataset.font === font));
+  localStorage.setItem('vp_font', font);
+}
+
+/* ─── SITE LOGO / ICON ──────────────────────────────── */
+function applyLogo() {
+  const el = document.getElementById('navLogo');
+  if (!el) return;
+  if (siteLogo) {
+    el.innerHTML = `<span class="logo-custom-icon">${siteLogo}</span><span class="logo-text">Vault<span>Play</span></span>`;
+  } else {
+    el.innerHTML = `Vault<span>Play</span>`;
+  }
+}
+
+/* ─── CARD HOVER PREVIEW ────────────────────────────── */
+let hoverTimeout = null;
+let previewEl    = null;
+
+function createPreviewEl() {
+  const el = document.createElement('div');
+  el.className = 'card-preview-popup';
+  el.id = 'cardPreviewPopup';
+  document.body.appendChild(el);
+  return el;
+}
+
+function showCardPreview(game, cardRect) {
+  if (!previewEl) previewEl = createPreviewEl();
+  const rating = ratings[game.name] || 0;
+  const plays  = playCounts[game.name] || 0;
+  const best   = bestTimes[game.name];
+  previewEl.innerHTML = `
+    <div class="cpp-thumb">
+      ${game.thumb ? `<img src="${game.thumb}" alt="${game.name}">` : `<div class="cpp-thumb-placeholder">🎮</div>`}
+    </div>
+    <div class="cpp-body">
+      <div class="cpp-name">${game.name}</div>
+      <div class="cpp-cat">${game.cat}</div>
+      ${rating ? `<div class="cpp-rating">${'⭐'.repeat(rating)}</div>` : ''}
+      <div class="cpp-stats">
+        ${plays  ? `<span>▶ ${plays} plays</span>` : '<span>Never played</span>'}
+        ${best   ? `<span>⏱ Best: ${formatTime(best)}</span>` : ''}
+        ${isFav(game.name) ? `<span>❤️ Favorited</span>` : ''}
+      </div>
+      <div class="cpp-hint">Click to play</div>
+    </div>`;
+
+  /* position popup above or below card */
+  const popW = 220, popH = 180;
+  let left = cardRect.left + cardRect.width / 2 - popW / 2;
+  let top  = cardRect.top - popH - 12 + window.scrollY;
+  /* keep in viewport horizontally */
+  left = Math.max(8, Math.min(left, window.innerWidth - popW - 8));
+  /* if not enough space above, show below */
+  if (cardRect.top < popH + 20) top = cardRect.bottom + 12 + window.scrollY;
+
+  previewEl.style.left = left + 'px';
+  previewEl.style.top  = top  + 'px';
+  previewEl.classList.add('visible');
+}
+
+function hideCardPreview() {
+  clearTimeout(hoverTimeout);
+  if (previewEl) previewEl.classList.remove('visible');
+}
+
+/* ─── SPLIT SCREEN ──────────────────────────────────── */
+let splitGame1 = null;
+let splitGame2 = null;
+
+function openSplitScreen(game) {
+  if (!splitGame1) {
+    splitGame1 = game;
+    document.getElementById('splitFrame1').src = game.url;
+    document.getElementById('splitTitle1').textContent = game.name;
+    const th1 = document.getElementById('splitThumb1');
+    th1.innerHTML = game.thumb ? `<img src="${game.thumb}" alt="${game.name}">` : '';
+    document.getElementById('splitScreen').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('splitPickOverlay').classList.add('visible');
+    renderSplitPicker();
+    showToast('Pick a second game to split screen');
+  } else {
+    splitGame2 = game;
+    document.getElementById('splitFrame2').src = game.url;
+    document.getElementById('splitTitle2').textContent = game.name;
+    const th2 = document.getElementById('splitThumb2');
+    th2.innerHTML = game.thumb ? `<img src="${game.thumb}" alt="${game.name}">` : '';
+    document.getElementById('splitPickOverlay').classList.remove('visible');
+    addRecent(game);
+  }
+}
+
+function closeSplitScreen() {
+  splitGame1 = null; splitGame2 = null;
+  document.getElementById('splitFrame1').src = '';
+  document.getElementById('splitFrame2').src = '';
+  document.getElementById('splitScreen').classList.remove('open');
+  document.getElementById('splitPickOverlay').classList.remove('visible');
+  document.body.style.overflow = '';
+}
+
+function renderSplitPicker() {
+  const grid = document.getElementById('splitPickGrid');
+  grid.innerHTML = '';
+  GAMES.forEach(game => {
+    if (game.name === splitGame1?.name) return;
+    const card = document.createElement('div');
+    card.className = 'split-pick-card';
+    card.innerHTML = `
+      <div class="split-pick-thumb">
+        ${game.thumb ? `<img src="${game.thumb}" alt="${game.name}">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;">🎮</div>'}
+      </div>
+      <div class="split-pick-name">${game.name}</div>`;
+    card.addEventListener('click', () => openSplitScreen(game));
+    grid.appendChild(card);
+  });
+}
 
 /* ─── SPOTLIGHT ─────────────────────────────────────── */
 let spotlightIndex    = -1;
@@ -859,7 +1066,44 @@ document.addEventListener('keydown', e => {
   if (matches(sc.toggleView)) { compactView = !compactView; applyView(); showToast(compactView ? 'Compact view' : 'Grid view'); return; }
 });
 
-/* ─── THEME TOGGLE ──────────────────────────────────── */
+/* ─── SPLIT SCREEN EVENTS ───────────────────────────── */
+document.getElementById('splitCloseBtn').addEventListener('click', closeSplitScreen);
+document.getElementById('splitSwapBtn').addEventListener('click', () => {
+  if (!splitGame1 || !splitGame2) return;
+  [splitGame1, splitGame2] = [splitGame2, splitGame1];
+  document.getElementById('splitFrame1').src = splitGame1.url;
+  document.getElementById('splitFrame2').src = splitGame2.url;
+  document.getElementById('splitTitle1').textContent = splitGame1.name;
+  document.getElementById('splitTitle2').textContent = splitGame2.name;
+  const t1 = document.getElementById('splitThumb1');
+  const t2 = document.getElementById('splitThumb2');
+  t1.innerHTML = splitGame1.thumb ? `<img src="${splitGame1.thumb}">` : '';
+  t2.innerHTML = splitGame2.thumb ? `<img src="${splitGame2.thumb}">` : '';
+  showToast('Games swapped');
+});
+
+/* drag to resize split panes */
+(function() {
+  const divider = document.getElementById('splitDivider');
+  let dragging  = false;
+  divider.addEventListener('mousedown', () => { dragging = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; });
+  document.addEventListener('mouseup',  () => { dragging = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const body = document.getElementById('splitScreen').querySelector('.split-body');
+    const rect = body.getBoundingClientRect();
+    const pct  = Math.max(20, Math.min(80, ((e.clientX - rect.left) / rect.width) * 100));
+    const panes = body.querySelectorAll('.split-pane');
+    panes[0].style.flex = `0 0 ${pct}%`;
+    panes[1].style.flex = `0 0 ${100 - pct}%`;
+  });
+})();
+
+/* ─── INCOGNITO INDICATOR ───────────────────────────── */
+function updateIncognitoIndicator() {
+  document.getElementById('incognitoIndicator').classList.toggle('visible', incognito);
+}
+updateIncognitoIndicator();
 const themeBtn  = document.getElementById('themeBtn');
 const themeIcon = document.getElementById('themeIcon');
 let darkMode = localStorage.getItem('vp_theme') !== 'light';
@@ -878,9 +1122,10 @@ applyAccent(accentColor);
 applyBg(bgStyle);
 applyCardSize(cardSize);
 applyTabTitle();
+applyFont(siteFont);
+applyLogo();
+if (incognito) document.body.classList.add('incognito-mode');
 applyView();
 renderAll();
-/* stagger page sections in */
 requestAnimationFrame(() => animateSections());
-/* center active pill on load */
 setTimeout(() => scrollActivePill(), 100);

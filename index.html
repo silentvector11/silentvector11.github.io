@@ -231,6 +231,39 @@
               <button class="setting-btn" id="resetTabTitleBtn">Reset</button>
             </div>
           </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="setting-name">Panic Redirect URL</div><div class="setting-hint">Where the panic button redirects to</div></div>
+            <input class="setting-input" id="panicUrlInput" type="text" placeholder="https://google.com" maxlength="200" style="width:160px"/>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">🎭 Identity</div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="setting-name">Site Logo / Icon</div><div class="setting-hint">Emoji or text shown before the site name</div></div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input class="setting-input" id="logoEmojiInput" type="text" placeholder="🎮 or V" maxlength="4" style="width:80px;text-align:center;font-size:18px"/>
+              <div id="logoPreview" style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--accent)">Preview</div>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="setting-name">Incognito Mode</div><div class="setting-hint">Pauses play history and recently played tracking</div></div>
+            <button class="setting-btn incognito-btn" id="incognitoToggle">🕵️ Incognito: OFF</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">🔤 Font Style</div>
+          <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+            <div class="setting-hint">Choose a font style for the whole site</div>
+            <div class="font-btns">
+              <button class="font-btn active" data-font="default">Default</button>
+              <button class="font-btn" data-font="modern">Modern</button>
+              <button class="font-btn" data-font="mono">Mono</button>
+              <button class="font-btn" data-font="rounded">Rounded</button>
+              <button class="font-btn" data-font="elegant">Elegant</button>
+            </div>
+          </div>
         </div>
         <div class="settings-section">
           <div class="settings-section-title">🎨 Appearance</div>
@@ -310,6 +343,45 @@
       </div>
     </div>
   </div>
+
+  <!-- ══ SPLIT SCREEN ══════════════════════════════════════ -->
+  <div id="splitScreen">
+    <div class="split-bar">
+      <div class="split-game-info">
+        <div class="split-thumb" id="splitThumb1"></div>
+        <span class="split-title" id="splitTitle1">Game 1</span>
+      </div>
+      <div class="split-center-controls">
+        <span class="split-label">⊞ Split Screen</span>
+        <button class="split-swap" id="splitSwapBtn" title="Swap games">⇄</button>
+      </div>
+      <div class="split-game-info" style="justify-content:flex-end">
+        <span class="split-title" id="splitTitle2">Pick a game →</span>
+        <div class="split-thumb" id="splitThumb2"></div>
+      </div>
+      <button class="split-close" id="splitCloseBtn">✕ Close Split</button>
+    </div>
+    <div class="split-body">
+      <div class="split-pane">
+        <iframe id="splitFrame1" allowfullscreen></iframe>
+      </div>
+      <div class="split-divider" id="splitDivider"></div>
+      <div class="split-pane">
+        <iframe id="splitFrame2" allowfullscreen></iframe>
+        <!-- pick game overlay -->
+        <div class="split-pick-overlay" id="splitPickOverlay">
+          <div class="split-pick-title">Choose a second game</div>
+          <div class="split-pick-grid" id="splitPickGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CARD PREVIEW POPUP ════════════════════════════════ -->
+  <div class="card-preview-popup" id="cardPreviewPopup"></div>
+
+  <!-- ══ INCOGNITO INDICATOR ══════════════════════════════ -->
+  <div class="incognito-indicator" id="incognitoIndicator">🕵️ Incognito</div>
 
   <!-- ══ TOAST ════════════════════════════════════════════ -->
   <div class="toast" id="toast"><span class="toast-icon" id="toastIcon"></span><span id="toastMsg"></span></div>
