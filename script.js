@@ -371,9 +371,6 @@ function initAuth() {
       currentUser = session.user;
       updateAuthUI();
       await loadUserData(currentUser.id);
-      /* re-fetch count after login since presence was already started */
-      await updatePresence();
-      await fetchLiveCount();
     } else {
       currentUser = null;
       updateAuthUI();
@@ -381,6 +378,11 @@ function initAuth() {
         setTimeout(() => openAuthModal(), 800);
       }
     }
+    /* always re-fetch count after any auth state change */
+    /* retry 3 times with increasing delays to ensure it sticks */
+    fetchLiveCount();
+    setTimeout(() => fetchLiveCount(), 1000);
+    setTimeout(() => fetchLiveCount(), 3000);
   });
 }
 
