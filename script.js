@@ -5,6 +5,14 @@
    url   : path to game folder index.html
    thumb : path to thumbnail image
 ─────────────────────────────────────────────────────── */
+const SUPABASE_URL  = 'https://hbugjcxrlcxdwwqgdftg.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhidWdqY3hybGN4ZHd3cWdkZnRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NjE1MDksImV4cCI6MjA4OTEzNzUwOX0.QReHOH1B_T0LyUW5Rrx-IospN6svWq29S4Xxh4hZXk0';
+const supabase      = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+supabase.auth.getSession().then(({ data }) => {
+  console.log('Supabase connected. Session:', data.session);
+});
+
 const GAMES = [
   { name: "Slope",       cat: "action", url: "games/slope/index.html",       thumb: "thumbnails/slope.jpeg" },
   { name: "Drive Mad",   cat: "racing", url: "games/drive-mad/index.html",   thumb: "thumbnails/drive-mad.jpg" },
