@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VaultPlay — Free Games Online</title>
+  <title>Vault</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -229,7 +229,7 @@
         <button class="modal-close" id="shortcutsModalClose">✕</button>
       </div>
       <div class="modal-body">
-        <p style="color:var(--muted);font-size:13px;margin-bottom:18px;">Click any key badge to reassign it. Press the new key to confirm.</p>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:18px;">Click a key badge then press your new key. For Alt shortcuts, hold Alt then press the letter. Press Esc to cancel.</p>
         <div id="shortcutsList"></div>
       </div>
     </div>
@@ -252,13 +252,7 @@
               <div class="setting-name">Tab Title</div>
               <div class="setting-hint">What shows in your browser tab permanently</div>
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-              <button class="tab-preset" data-title="Google Docs">📄 Docs</button>
-              <button class="tab-preset" data-title="Khan Academy">📚 Khan</button>
-              <button class="tab-preset" data-title="Classroom">🏫 Class</button>
-              <button class="tab-preset" data-title="Calculator">🔢 Calc</button>
-              <input class="setting-input" id="tabTitleInput" type="text" placeholder="Custom…" maxlength="40" style="width:110px"/>
-            </div>
+            <input class="setting-input" id="tabTitleInput" type="text" placeholder="e.g. Google Docs" maxlength="40" style="width:160px"/>
           </div>
           <div class="setting-row">
             <div class="setting-label">

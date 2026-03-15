@@ -243,7 +243,7 @@ document.getElementById('viewToggleBtn').addEventListener('click', () => {
 
 /* ─── TAB TITLE ─────────────────────────────────────── */
 function applyTabTitle() {
-  document.title = tabTitle || 'VaultPlay — Free Games Online';
+  document.title = tabTitle || 'Vault';
 }
 
 /* ─── SORT ──────────────────────────────────────────── */
@@ -337,7 +337,6 @@ document.getElementById('shortcutsModal').addEventListener('click', e => { if(e.
 document.getElementById('settingsBtn').addEventListener('click', () => {
   document.getElementById('tabTitleInput').value = tabTitle;
   document.getElementById('currentTabTitle').textContent = document.title;
-  document.querySelectorAll('.tab-preset').forEach(b => b.classList.toggle('active', b.dataset.title === tabTitle));
   document.getElementById('bgStyleSelect').value = bgStyle;
   document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color === accentColor));
   document.getElementById('customColorPicker').value = accentColor;
@@ -358,18 +357,9 @@ document.getElementById('bgStyleSelect').addEventListener('change', e => applyBg
 /* card size buttons */
 document.querySelectorAll('.size-btn[data-size]').forEach(b => { b.addEventListener('click', () => applyCardSize(b.dataset.size)); });
 
-/* tab presets */
-document.querySelectorAll('.tab-preset').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.getElementById('tabTitleInput').value = btn.dataset.title;
-    document.querySelectorAll('.tab-preset').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  });
-});
 document.getElementById('resetTabTitleBtn').addEventListener('click', () => {
   tabTitle = ''; document.getElementById('tabTitleInput').value = '';
-  document.querySelectorAll('.tab-preset').forEach(b => b.classList.remove('active'));
-  applyTabTitle(); saveState(); showToast('Tab title reset');
+  applyTabTitle(); saveState(); showToast('Tab title reset to "Vault"');
 });
 
 /* save */
@@ -690,11 +680,10 @@ document.querySelectorAll('.spot-cat').forEach(btn => {
 
 /* ─── KEYBOARD HANDLER ──────────────────────────────── */
 document.addEventListener('keydown', e => {
-  /* spotlight: Alt+C */
-  if (e.altKey && e.key.toLowerCase() === 'c') { e.preventDefault(); openSpotlight(); return; }
-
   if (listeningFor) {
     e.preventDefault();
+    /* ignore modifier-only keypresses — wait for the actual key */
+    if (['Alt','Control','Shift','Meta'].includes(e.key)) return;
     if (e.key === 'Escape') { listeningFor = null; renderShortcutsList(); return; }
     shortcuts[listeningFor].key = e.key.toLowerCase();
     shortcuts[listeningFor].alt = e.altKey;
@@ -702,6 +691,9 @@ document.addEventListener('keydown', e => {
     showToast('✅ Shortcut updated!'); return;
   }
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+  /* spotlight: Alt+C (checked after listeningFor so it can be rebound) */
+  if (e.altKey && e.key.toLowerCase() === 'c') { e.preventDefault(); openSpotlight(); return; }
 
   const sc = shortcuts;
   /* close game — escape */
